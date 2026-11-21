@@ -1,6 +1,6 @@
 # Adversarial set
 
-108 hits (106 alerts) in `adversarial/`. Every id starts with `ADV-`. Each case carries the records it needs. Answers follow `dev/POLICY.md`. Cases that turn on a point the policy leaves open are marked `ambiguous_policy: true`.
+128 hits (126 alerts) in `adversarial/`. Every id starts with `ADV-`. Each case carries the records it needs. Answers follow `dev/POLICY.md`. Cases that turn on a point the policy leaves open are marked `ambiguous_policy: true`.
 
 `practice_labels.jsonl` uses the practice-label fields (`decision`, `reason_codes`, `customer_record_ids`, `evidence`, `reference_reason`, `path`) plus `category`, `weakness`, what a naive implementation would output, `module` when a miss has a home, and the policy note when there is one.
 
@@ -16,7 +16,16 @@ Validates the files and runs `system/run adversarial <output>`. Stdlib only. `--
 
 ## Counts
 
-Decisions: 66 `SAME_ENTITY`, 24 `REVIEW`, 18 `DIFFERENT_ENTITY`.
+Decisions: 79 `SAME_ENTITY`, 27 `REVIEW`, 22 `DIFFERENT_ENTITY`.
+
+The third batch (ADV-H-109 through ADV-H-128) is empty fields, bad dates and country names, and cultural names. By theme: empty fields 5 (4 `SAME_ENTITY`, 1 `REVIEW`), bad input 7 (4 `SAME_ENTITY`, 2 `REVIEW`, 1 `DIFFERENT_ENTITY`), cultural names 8 (6 `SAME_ENTITY`, 2 `DIFFERENT_ENTITY`).
+
+## Current pipeline on this branch
+
+`python3 adversarial/run.py`: accuracy 126/128, wrong `DIFFERENT_ENTITY` 2.
+
+- ADV-H-110 `REVIEW` → `DIFFERENT_ENTITY` `NAME_MISMATCH_VERIFIED`. The hit's only name is `N/A`. `policy.py` (Workstream B) treats that placeholder as a name that fails to agree and clears. The label leaves it for review. `ambiguous_policy`.
+- ADV-H-117 `REVIEW` → `DIFFERENT_ENTITY` `DOB_MISMATCH`. 31 February does not parse in `normalize.py`, then `fallbacks.py` (Workstream A) accepts day 31 in any month, so the approved date becomes 31 Feb 1980 and contradicts 3 March. A missing date is not a mismatch.
 
 | Category | Hits | Misses | Wrong clear |
 |---|---|---|---|
@@ -56,7 +65,7 @@ The second batch (ADV-H-59 through ADV-H-108) varies the seven misses: phone pun
 
 ## After the fixes on this branch
 
-`python3 adversarial/run.py` is 108/108, with 0 wrong `DIFFERENT_ENTITY`. Practice labels stay 50/50 with 0 unsafe clearances. Against `7ddca7b`, 16 dev decisions changed: 10 `REVIEW` to `DIFFERENT_ENTITY` and 6 `REVIEW` to `SAME_ENTITY`, each from an explicit "was born" sentence about the listed person. Four more hits stayed `DIFFERENT_ENTITY` and only changed reason code, to `DOB_MISMATCH`.
+On the first 108 hits the fixes score 108/108 with 0 wrong `DIFFERENT_ENTITY`. Practice labels stay 50/50 with 0 unsafe clearances. Against `7ddca7b`, 16 dev decisions changed: 10 `REVIEW` to `DIFFERENT_ENTITY` and 6 `REVIEW` to `SAME_ENTITY`, each from an explicit "was born" sentence about the listed person. Four more hits stayed `DIFFERENT_ENTITY` and only changed reason code, to `DOB_MISMATCH`.
 
 The numbers below are `main` at `7ddca7b`, before those fixes.
 

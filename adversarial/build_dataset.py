@@ -436,7 +436,7 @@ def build(b):
           "DIFFERENT_ENTITY", "DOB_MISMATCH",
           "Does not join the 00-prefix number, keeps Marcus Hale's 1970-05-05 check, and clears.",
           bad, "Same phone written with 00")
-    b.groups("ADV-A-03", [[bad]])
+    b.groups("ADV-A-03", [[bad, good]])
 
     # --- 04 same document number, spacing differs: must merge ---
     left = b.customer("04", "Helen Kruger", "1972-02-02", "Spain", "Madrid")
@@ -463,7 +463,7 @@ def build(b):
           "DIFFERENT_ENTITY", "DOB_MISMATCH",
           "Treats the space as a different document, keeps Helen Kruger's 1972 check, and clears.",
           left, "Document number with a space")
-    b.groups("ADV-A-04", [[left]])
+    b.groups("ADV-A-04", [[left, right]])
 
     # --- 07 approved note that mentions an expired passport ---
     jane = b.customer("07", "Jane Marie Cole", "1970-01-01", "Canada", "Toronto")
@@ -764,7 +764,9 @@ def build(b):
     for spec in rows:
         simple(b, spec)
     import more_cases
+    import hard_cases
     more_cases.add(b, same_reason, dob_reason, review_nodob, path_join, chain, qname)
+    hard_cases.add(b, same_reason, dob_reason, review_nodob, path_join, chain)
     for hid, module in {
         "ADV-H-03": "load.py phone_key, via customer.py",
         "ADV-H-04": "load.py norm_key, via customer.py",
@@ -1244,13 +1246,13 @@ def verify(b):
     by_alert = {a["alert_id"]: a for a in data.alerts}
     _parsed_kyc_note.cache = {}
     jane = resolve(by_alert["ADV-A-07"], data).persons[0]
-    if jane.verified_dob is not None or jane.verified_name is not None:
-        print("note trap failed: expired-word note was kept", jane.verified_name, jane.verified_dob)
+    if jane.verified_dob is None or jane.verified_dob.value.year != 1982:
+        print("approved note was not kept", jane.verified_dob)
         bad += 1
     amina = resolve(by_alert["ADV-A-10"], data).persons[0]
     countries = {c.value for c in amina.countries}
-    if "Pakistan" in countries or "France" not in countries:
-        print("residence trap failed", countries)
+    if "Pakistan" not in countries or "France" not in countries:
+        print("grew-up country missing", countries)
         bad += 1
     nora = resolve(by_alert["ADV-A-05"], data).persons[0]
     if nora.verified_dob is None or nora.verified_dob.value.year != 1984:

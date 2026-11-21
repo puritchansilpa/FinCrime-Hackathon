@@ -95,7 +95,7 @@ def add(b, same_reason, dob_reason, review_nodob, path_join, chain, qname):
          "Otto Morello", "Lina Morello", "1992-05-05", "1992-05-05",
          "+44 7700 900621", "07700 900621",
          "Otto Morello", "1962-05-05", "2018-01-01", "Lina Morello", "1992-05-05", "2024-06-01",
-         "Lina Morello", "1992-05-05", "United Kingdom", "Manchester", "merge", False,
+         "Lina Morello", "1992-05-05", "United Kingdom", "Manchester", "merge", True,
          "DIFFERENT_ENTITY", "DOB_MISMATCH")
     pair("63", "00 prefix with spaces", "phone_dob_merge",
          "0033 6 12 34 56 78 is the same French number as +33 6 12 34 56 78. Same full date of birth.",
@@ -104,7 +104,7 @@ def add(b, same_reason, dob_reason, review_nodob, path_join, chain, qname):
          "Otto Quintana", "Lina Quintana", "1993-06-06", "1993-06-06",
          "+33 6 12 34 56 78", "0033 6 12 34 56 78",
          "Otto Quintana", "1963-06-06", "2018-01-01", "Lina Quintana", "1993-06-06", "2024-06-01",
-         "Lina Quintana", "1993-06-06", "France", "Lyon", "merge", False,
+         "Lina Quintana", "1993-06-06", "France", "Lyon", "merge", True,
          "DIFFERENT_ENTITY", "DOB_MISMATCH")
     pair("64", "Extension x99", "phone_dob_merge",
          "x99 is an extension on the same number, not a different phone. Same full date of birth.",
@@ -113,7 +113,7 @@ def add(b, same_reason, dob_reason, review_nodob, path_join, chain, qname):
          "Otto Barragan", "Lina Barragan", "1994-08-08", "1994-08-08",
          "+1 202 555 0164", "+1 202 555 0164 x99",
          "Otto Barragan", "1964-08-08", "2018-01-01", "Lina Barragan", "1994-08-08", "2024-06-01",
-         "Lina Barragan", "1994-08-08", "United States", "Boston", "merge", False,
+         "Lina Barragan", "1994-08-08", "United States", "Boston", "merge", True,
          "DIFFERENT_ENTITY", "DOB_MISMATCH")
     pair("65", "Extension written as ext", "phone_dob_merge",
          "ext. 205 is an extension on +1 202 555 0165. Same number, same full date of birth.",
@@ -122,7 +122,7 @@ def add(b, same_reason, dob_reason, review_nodob, path_join, chain, qname):
          "Otto Castell", "Lina Castell", "1995-09-09", "1995-09-09",
          "+1 202 555 0165", "+1 202 555 0165 ext. 205",
          "Otto Castell", "1965-09-09", "2018-01-01", "Lina Castell", "1995-09-09", "2024-06-01",
-         "Lina Castell", "1995-09-09", "United States", "Denver", "merge", False,
+         "Lina Castell", "1995-09-09", "United States", "Denver", "merge", True,
          "DIFFERENT_ENTITY", "DOB_MISMATCH")
     pair("66", "Same phone, different full date of birth", "phone_dob_merge",
          "The number matches and the dates of birth do not. Family members share phones. Do not merge. The linked customer's own check agrees with the hit.",
@@ -160,7 +160,7 @@ def add(b, same_reason, dob_reason, review_nodob, path_join, chain, qname):
          "Otto Janssen", "Lina Janssen", "1972-02-02", "1991-04-04",
          "+1 202 555 1169", "+1 202 555 1269",
          "Otto Janssen", "1972-02-02", "2018-01-01", "Lina Janssen", "1991-04-04", "2024-06-01",
-         "Lina Janssen", "1991-04-04", "Netherlands", "Rotterdam", "merge", False,
+         "Lina Janssen", "1991-04-04", "Netherlands", "Rotterdam", "merge", True,
          "DIFFERENT_ENTITY", "DOB_MISMATCH", doc_a="WQ-770069", doc_b="WQ770069")
     pair("70", "Document number differs only by case", "document_merge",
          "Case does not change a document number. The newest approved check agrees with the hit.",
@@ -178,7 +178,7 @@ def add(b, same_reason, dob_reason, review_nodob, path_join, chain, qname):
          "Otto Montague", "Lina Montague", "1973-03-03", "1993-03-03",
          "+1 202 555 1171", "+1 202 555 1271",
          "Otto Montague", "1973-03-03", "2018-01-01", "Lina Montague", "1993-03-03", "2024-06-01",
-         "Lina Montague", "1993-03-03", "Canada", "Toronto", "merge", False,
+         "Lina Montague", "1993-03-03", "Canada", "Toronto", "merge", True,
          "DIFFERENT_ENTITY", "DOB_MISMATCH", doc_a="WQ  770071", doc_b="WQ770071")
     pair("72", "Dash and space in a document number", "document_merge",
          "WQ-77 0072 and WQ770072 are the same document number.",
@@ -187,7 +187,7 @@ def add(b, same_reason, dob_reason, review_nodob, path_join, chain, qname):
          "Otto Noriega", "Lina Noriega", "1974-04-04", "1994-04-04",
          "+1 202 555 1172", "+1 202 555 1272",
          "Otto Noriega", "1974-04-04", "2018-01-01", "Lina Noriega", "1994-04-04", "2024-06-01",
-         "Lina Noriega", "1994-04-04", "Spain", "Bilbao", "merge", False,
+         "Lina Noriega", "1994-04-04", "Spain", "Bilbao", "merge", True,
          "DIFFERENT_ENTITY", "DOB_MISMATCH", doc_a="WQ-77 0072", doc_b="WQ770072")
     pair("73", "Leading zeros in a document number", "document_merge",
          "000770073 and 770073 are the same document number.",
@@ -196,7 +196,7 @@ def add(b, same_reason, dob_reason, review_nodob, path_join, chain, qname):
          "Otto Olsson", "Lina Olsson", "1975-05-05", "1995-05-05",
          "+1 202 555 1173", "+1 202 555 1273",
          "Otto Olsson", "1975-05-05", "2018-01-01", "Lina Olsson", "1995-05-05", "2024-06-01",
-         "Lina Olsson", "1995-05-05", "Sweden", "Stockholm", "merge", False,
+         "Lina Olsson", "1995-05-05", "Sweden", "Stockholm", "merge", True,
          "DIFFERENT_ENTITY", "DOB_MISMATCH", doc_a="000770073", doc_b="770073")
     pair("74", "Document numbers one digit apart", "document_merge",
          "WQ770074 and WQ770075 are different documents, and the people have different dates of birth. The linked check agrees with the hit.",
