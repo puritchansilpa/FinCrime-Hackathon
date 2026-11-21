@@ -11,7 +11,7 @@ import sys
 import time
 import traceback
 
-from . import customer, hit, llm, policy, review_queue
+from . import customer, hit, llm, policy, review_queue, templates
 from .load import load_data
 from .names import Variants
 from .models import REVIEW, Decision, Resolution
@@ -43,6 +43,7 @@ def run(data_folder: str, output_path: str, use_llm: bool = False) -> dict:
     data.variants = Variants.load(data_folder)  # for B's name matching in policy.decide
     data.use_llm = use_llm  # read by A7/B7 LLM pieces; off by default
     llm.configure(use_llm)
+    templates.configure(data.notes.values())
     if use_llm and not llm.enabled():
         print("warning: --llm given but XAI_API_KEY is not set; running without the LLM",
               file=sys.stderr)
@@ -107,6 +108,9 @@ def run(data_folder: str, output_path: str, use_llm: bool = False) -> dict:
     print(f"wrote {stats['hits']} hits to {output_path} in {stats['seconds']}s "
           f"({errors} errors)", file=sys.stderr)
     print(f"wrote {len(ranked)} review tasks to {review_path}", file=sys.stderr)
+    stats["templates"] = templates.stats()
+    if stats["templates"]["triggered"]:
+        print(f"note templates: {stats['templates']}", file=sys.stderr)
     if llm.enabled():
         stats["llm"] = llm.stats()
         print(f"LLM: {stats['llm']}", file=sys.stderr)

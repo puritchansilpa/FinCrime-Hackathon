@@ -18,7 +18,7 @@ A6: build each Person: declared facts from every record; verified name, DOB and 
 
 Never use another customer's records.
 """
-from . import fallbacks, llm, names, normalize, notes_parse
+from . import fallbacks, llm, names, normalize, notes_parse, templates
 from .load import name_tokens, norm_key, phone_key
 from .models import Fact, Person, Resolution
 
@@ -291,6 +291,8 @@ def _parsed_kyc_note(note):
         # Outside the kyc channel, only a note that clearly records a check counts.
         if p and (is_kyc or (p["dob"] and p["name"] and (p["provider"] or p["doc_type"]))):
             parsed = p
+        if is_kyc:  # template learner (P3): only acts when a fact is missing or ambiguous
+            parsed = templates.improve(parsed, text, note.get("created_at"), note["note_id"])
         # LLM fallback (only with --llm): fill what the regex could not read in a kyc note.
         # Values the regex did read are kept; the LLM's values are verified against the text.
         if is_kyc and llm.enabled() and (parsed is None or not parsed.get("name")
