@@ -200,7 +200,8 @@ class Bank:
 
     def lab(self, hit, alert, decision, codes, customers, evidence, reason, path,
             category, weakness, naive_decision, naive_code, naive_note,
-            naive_customer=None, title="", ambiguous=False, ambiguous_note=None):
+            naive_customer=None, title="", ambiguous=False, ambiguous_note=None,
+            module=""):
         if isinstance(customers, list):
             cust = "; ".join(customers)
         else:
@@ -223,6 +224,7 @@ class Bank:
             "naive_note": naive_note,
             "ambiguous_policy": ambiguous,
             "ambiguous_policy_note": ambiguous_note,
+            "module": module,
         }
 
     def groups(self, alert, groups):
@@ -761,6 +763,18 @@ def build(b):
     rows = _simple_rows()
     for spec in rows:
         simple(b, spec)
+    import more_cases
+    more_cases.add(b, same_reason, dob_reason, review_nodob, path_join, chain, qname)
+    for hid, module in {
+        "ADV-H-03": "load.py phone_key, via customer.py",
+        "ADV-H-04": "load.py norm_key, via customer.py",
+        "ADV-H-07": "notes_parse.py",
+        "ADV-H-10": "notes_parse.py",
+        "ADV-H-19": "hit.py",
+        "ADV-H-22": "hit.py",
+        "ADV-H-54": "hit.py",
+    }.items():
+        b.labels[hid]["module"] = module
 
 
 def _simple_rows():

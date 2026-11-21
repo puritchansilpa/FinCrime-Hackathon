@@ -225,7 +225,7 @@ def score(labels, preds):
         bucket["n"] += 1
         if pred is None:
             bucket["miss"] += 1
-            misses.append((hid, cat, label["decision"], "MISSING", "", label.get("title")))
+            misses.append((hid, cat, label["decision"], "MISSING", "", label.get("title"), ""))
             cost += COST[label["decision"]]["REVIEW"]
             continue
         got = pred.get("decision")
@@ -236,7 +236,8 @@ def score(labels, preds):
                 reason_ok += 1
         else:
             bucket["miss"] += 1
-            misses.append((hid, cat, label["decision"], got, pred.get("reason_code"), label.get("title")))
+            misses.append((hid, cat, label["decision"], got, pred.get("reason_code"),
+                           label.get("title"), label.get("module") or ""))
         if got == "DIFFERENT_ENTITY" and label["decision"] != "DIFFERENT_ENTITY":
             wrong_de += 1
             bucket["wrong_de"] += 1
@@ -259,8 +260,9 @@ def score(labels, preds):
     if misses:
         print()
         print("misses (gold -> pipeline)")
-        for hid, cat, gold, got, code, title in misses:
-            print("  %-10s %-20s %s -> %s %s  %s" % (hid, cat, gold, got, code or "", title or ""))
+        for hid, cat, gold, got, code, title, module in misses:
+            print("  %-10s %-18s %s -> %s %-22s  %s" % (
+                hid, cat, gold, got, code or "", module or title or ""))
     return {"correct": correct, "total": total, "wrong_de": wrong_de, "misses": len(misses)}
 
 
