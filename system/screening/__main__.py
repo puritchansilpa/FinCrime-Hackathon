@@ -11,7 +11,7 @@ import sys
 import time
 import traceback
 
-from . import customer, hit, llm, policy
+from . import customer, hit, llm, policy, review_queue
 from .load import load_data
 from .names import Variants
 from .models import REVIEW, Decision, Resolution
@@ -48,7 +48,20 @@ def run(data_folder: str, output_path: str, use_llm: bool = False) -> dict:
               file=sys.stderr)
 
     results = {}
+    queue = []
     errors = 0
+
+    def add_review(final, resolution, hit_row, alert):
+        # Annotation only. `final` is already the official decision and is not replaced.
+        if final.decision != REVIEW:
+            return
+        try:
+            row = review_queue.build_task(final, resolution, hit_row, alert, data)
+        except Exception:
+            traceback.print_exc(file=sys.stderr)
+            row = review_queue.fallback_row(final, "The review task could not be built, so the hit stays a review.")
+        if row is not None:
+            queue.append(row)
 
     def safe_resolve(alert):
         try:
@@ -65,16 +78,21 @@ def run(data_folder: str, output_path: str, use_llm: bool = False) -> dict:
                 if resolution is None:
                     raise RuntimeError("customer resolution failed")
                 results[hid] = decide_hit(hit_row, alert, resolution, data)
+                add_review(results[hid], resolution, hit_row, alert)
             except Exception as exc:
                 errors += 1
                 print(f"error on {hid}: {exc!r}", file=sys.stderr)
                 traceback.print_exc(file=sys.stderr)
                 results[hid] = _fallback(hid, alert["alert_id"], "internal error")
+                queue.append(review_queue.fallback_row(
+                    results[hid], "The hit could not be assessed, so it stays a review."))
 
     # Hits whose alert is not in alerts.jsonl still get a line.
     for hid, hit_row in data.hits.items():
         if hid not in results:
             results[hid] = _fallback(hid, hit_row.get("alert_id") or "", "its alert is missing")
+            queue.append(review_queue.fallback_row(
+                results[hid], "The hit could not be assessed, so it stays a review."))
 
     out_dir = os.path.dirname(os.path.abspath(output_path))
     os.makedirs(out_dir, exist_ok=True)
@@ -82,9 +100,13 @@ def run(data_folder: str, output_path: str, use_llm: bool = False) -> dict:
         for hid in sorted(results):
             fh.write(json.dumps(results[hid].to_output(), ensure_ascii=False) + "\n")
 
-    stats = {"hits": len(results), "errors": errors, "seconds": round(time.time() - started, 1)}
+    review_path = review_queue.queue_path(output_path)
+    ranked = review_queue.write_queue(queue, review_path)
+    stats = {"hits": len(results), "errors": errors, "seconds": round(time.time() - started, 1),
+             "reviews": len(ranked), "review_queue": review_path}
     print(f"wrote {stats['hits']} hits to {output_path} in {stats['seconds']}s "
           f"({errors} errors)", file=sys.stderr)
+    print(f"wrote {len(ranked)} review tasks to {review_path}", file=sys.stderr)
     if llm.enabled():
         stats["llm"] = llm.stats()
         print(f"LLM: {stats['llm']}", file=sys.stderr)
