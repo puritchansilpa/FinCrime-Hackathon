@@ -4,7 +4,7 @@ import unittest
 
 import _paths  # noqa: F401
 from fixtures import write_folder
-from screening.load import as_list, load_data, name_tokens, phone_key
+from screening.load import as_list, document_key, load_data, name_tokens, phone_key
 
 
 class HelperTests(unittest.TestCase):
@@ -19,8 +19,30 @@ class HelperTests(unittest.TestCase):
         self.assertEqual(name_tokens("José  MÜLLER-Ortiz (Jr.)"), ["jose", "muller", "ortiz", "jr"])
         self.assertEqual(name_tokens(None), [])
 
-    def test_phone_key_is_digits_only(self):
+    def test_phone_key_ignores_spacing_and_matches_the_same_number(self):
         self.assertEqual(phone_key("+351 912 000 111"), phone_key("+351912000111"))
+        self.assertEqual(phone_key("+49 151 234 5678"), phone_key("+491512345678"))
+        self.assertEqual(phone_key("+44-7700-900-321"), phone_key("+447700900321"))
+        self.assertEqual(phone_key("+1 (202) 555-0198"), phone_key("+12025550198"))
+        # international prefix, trunk 0, and an extension are the same subscriber
+        self.assertEqual(phone_key("+44 7700 900621"), phone_key("07700 900621"))
+        self.assertEqual(phone_key("+49 15123456789"), phone_key("004915123456789"))
+        self.assertEqual(phone_key("+33 6 12 34 56 78"), phone_key("0033 6 12 34 56 78"))
+        self.assertEqual(phone_key("+1 202 555 0164"), phone_key("+1 202 555 0164 x99"))
+        self.assertEqual(phone_key("+1 202 555 0165"), phone_key("+1 202 555 0165 ext. 205"))
+        # a different digit is a different number
+        self.assertNotEqual(phone_key("+1 202 555 0168"), phone_key("+1 202 555 0169"))
+
+    def test_document_key_ignores_case_space_dash_and_leading_zeros(self):
+        self.assertEqual(document_key("WQ-770069"), document_key("WQ770069"))
+        self.assertEqual(document_key("wq770070"), document_key("WQ770070"))
+        self.assertEqual(document_key("WQ  770071"), document_key("WQ770071"))
+        self.assertEqual(document_key("WQ-77 0072"), document_key("WQ770072"))
+        self.assertEqual(document_key("000770073"), document_key("770073"))
+        self.assertEqual(document_key("d1 "), document_key("D1"))
+        self.assertNotEqual(document_key("WQ770074"), document_key("WQ770084"))
+        self.assertEqual(document_key(None), "")
+        self.assertEqual(document_key(""), "")
 
 
 class LoadTests(unittest.TestCase):
@@ -58,7 +80,8 @@ class LoadTests(unittest.TestCase):
     def test_indexes(self):
         d = self.data
         self.assertEqual([c["record_id"] for c in d.customers_by_email["ana.silva@x.example"]], ["CUS-2"])
-        self.assertEqual([c["record_id"] for c in d.customers_by_phone["351912000111"]], ["CUS-1", "CUS-2"])
+        self.assertEqual([c["record_id"] for c in d.customers_by_phone[phone_key("+351 912 000 111")]],
+                         ["CUS-1", "CUS-2"])
         self.assertEqual([c["record_id"] for c in d.customers_by_name_token["silva"]], ["CUS-1", "CUS-2"])
         self.assertEqual([k["check_id"] for k in d.kyc_by_applicant["APP-1"]], ["KYC-1", "KYC-2"])
         self.assertEqual([n["note_id"] for n in d.notes_by_email["ana.silva@x.example"]], ["NOTE-1"])

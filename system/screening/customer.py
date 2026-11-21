@@ -19,7 +19,7 @@ A6: build each Person: declared facts from every record; verified name, DOB and 
 Never use another customer's records.
 """
 from . import fallbacks, llm, names, normalize, notes_parse, templates
-from .load import name_tokens, norm_key, phone_key
+from .load import document_key, name_tokens, norm_key, phone_key
 from .models import Fact, Person, Resolution
 
 LINKS = ("account_ref", "login_handle", "email")
@@ -206,7 +206,7 @@ def _same_person_links(rec, data):
                 if other["record_id"] != rid and parse_date(other.get("dob")) == dob:
                     yield other["record_id"], "phone+dob"
     for check in approved_checks(rid, data):
-        doc = norm_key(check.get("document_number"))
+        doc = document_key(check.get("document_number"))
         if not doc:
             continue
         for other_check in data.kyc_by_document.get(doc, ()):
@@ -392,8 +392,9 @@ def _person_from_records(records, data) -> Person:
                 found = llm.extract_residence_countries(text)
             for c in found:
                 countries.append(Fact(c, note["note_id"], "residence_note"))
-            if not found and notes_parse.looks_like_residence(text):
-                # The note says where they lived, but names no place we can tie to a country.
+            if not found and notes_parse.residence_without_place(text):
+                # The customer (not a relative) lived or worked somewhere we cannot tie to a
+                # country: 'every country tied to the customer' is then not known.
                 unresolved.append(f"the place named in {note['note_id']}")
 
     # drop exact repeats (e.g. the same residence note read twice), keep order stable

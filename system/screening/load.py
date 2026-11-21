@@ -60,9 +60,66 @@ def norm_key(value) -> str:
     return str(value).strip().casefold() if value is not None else ""
 
 
+# Calling codes stripped only from numbers written internationally (+ or 00).
+# Longest first, so 351 is not eaten by a shorter prefix. The rest must still
+# be long enough to be a subscriber number, or the code stays.
+_CALLING_CODES = tuple(sorted({
+    "212", "213", "216", "218", "220", "221", "222", "223", "224", "225", "226", "227", "228", "229",
+    "230", "231", "232", "233", "234", "235", "236", "237", "238", "239", "240", "241", "242", "243",
+    "244", "245", "246", "248", "249", "250", "251", "252", "253", "254", "255", "256", "257", "258",
+    "260", "261", "262", "263", "264", "265", "266", "267", "268", "269",
+    "351", "352", "353", "354", "355", "356", "357", "358", "359",
+    "370", "371", "372", "373", "374", "375", "376", "377", "378", "380", "381", "382", "385", "386", "387", "389",
+    "420", "421", "423",
+    "852", "853", "855", "856", "880", "886",
+    "960", "961", "962", "963", "964", "965", "966", "967", "968", "970", "971", "972", "973", "974", "975", "976", "977",
+    "992", "993", "994", "995", "996", "998",
+    "20", "27", "30", "31", "32", "33", "34", "36", "39", "40", "41", "43", "44", "45", "46", "47", "48", "49",
+    "51", "52", "53", "54", "55", "56", "57", "58", "60", "61", "62", "63", "64", "65", "66",
+    "81", "82", "84", "86", "90", "91", "92", "93", "94", "95", "98",
+    "1", "7",
+}, key=len, reverse=True))
+
+_EXTENSION = re.compile(r"(?i)(?:\s*(?:extension|ext\.?|x)\s*\d+)\s*$")
+
+
 def phone_key(value) -> str:
-    """Digits only, so '+34 672 768 027' and '+34672768027' meet."""
-    return re.sub(r"\D", "", str(value)) if value else ""
+    """Subscriber digits, so the same number meets however it was written.
+
+    Spaces, dashes and brackets disappear. An extension (x99, ext. 205) is not
+    part of the number. '+' and '00' are the same international prefix, and a
+    national trunk 0 is the same number as the country-code form
+    ('07700…' and '+44 7700…').
+    """
+    if not value:
+        return ""
+    text = _EXTENSION.sub("", str(value).strip())
+    digits = re.sub(r"\D", "", text)
+    if not digits:
+        return ""
+    international = text.lstrip().startswith("+") or digits.startswith("00")
+    if digits.startswith("00"):
+        digits = digits[2:]
+    elif not international and digits.startswith("0"):
+        digits = digits[1:]
+    if international:
+        for code in _CALLING_CODES:
+            if digits.startswith(code) and len(digits) - len(code) >= 6:
+                digits = digits[len(code):]
+                break
+    return digits
+
+
+def document_key(value) -> str:
+    """Document numbers: case, spaces, dashes and leading zeros do not count.
+
+    'WQ-77 0072', 'wq770072' and 'WQ770072' are one number. A different digit
+    stays different. Used only for document numbers, not emails or account ids.
+    """
+    if not value:
+        return ""
+    text = re.sub(r"[^0-9a-z]", "", str(value).casefold())
+    return re.sub(r"^0+(?=\d)", "", text)
 
 
 def name_tokens(value) -> list:
@@ -246,7 +303,7 @@ def load_data(folder: str) -> Data:
 
     by_check = lambda r: (_s(r.get("checked_at")), _s(r.get("check_id")))
     d.kyc_by_applicant = _index(raw["kyc_checks"], lambda r: _s(r.get("applicant_id")), by_check)
-    d.kyc_by_document = _index(raw["kyc_checks"], lambda r: norm_key(r.get("document_number")), by_check)
+    d.kyc_by_document = _index(raw["kyc_checks"], lambda r: document_key(r.get("document_number")), by_check)
 
     customers = list(d.customers.values())
     by_record = lambda r: _s(r.get("record_id"))
