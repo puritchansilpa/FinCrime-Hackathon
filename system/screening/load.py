@@ -142,6 +142,7 @@ class Data:
     accounts_by_customer: dict = field(default_factory=dict)    # customer_id -> [account]
     onboarding_by_account: dict = field(default_factory=dict)   # account_id -> [onboarding]
     onboarding_by_customer: dict = field(default_factory=dict)  # customer_id -> [onboarding]
+    onboarding_by_applicant: dict = field(default_factory=dict) # kyc_applicant_id -> [onboarding]
     kyc_by_applicant: dict = field(default_factory=dict)        # applicant_id -> [check] by checked_at
     kyc_by_document: dict = field(default_factory=dict)         # document_number -> [check]
     customers_by_email: dict = field(default_factory=dict)      # email -> [customer]
@@ -202,6 +203,7 @@ def load_data(folder: str) -> Data:
     d.accounts_by_customer = _index(raw["accounts"], lambda r: _s(r.get("customer_id")), by_account)
     d.onboarding_by_account = _index(raw["onboarding"], lambda r: norm_key(r.get("account_id")), by_account)
     d.onboarding_by_customer = _index(raw["onboarding"], lambda r: _s(r.get("customer_id")), by_account)
+    d.onboarding_by_applicant = _index(raw["onboarding"], lambda r: _s(r.get("kyc_applicant_id")), by_account)
 
     by_check = lambda r: (_s(r.get("checked_at")), _s(r.get("check_id")))
     d.kyc_by_applicant = _index(raw["kyc_checks"], lambda r: _s(r.get("applicant_id")), by_check)

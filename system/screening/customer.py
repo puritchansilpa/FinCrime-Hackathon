@@ -10,13 +10,14 @@ A3: no link -> search for the records that fit what was screened:
     a full, preferred or login name that agrees with the screened name (principle 8),
     a date of birth equal in every part both give, the screened country as residence
     or nationality, and the screened city in the record's city or address.
-A4: group records into persons.            (not built yet: one record = one person)
+A4: group the fitting records into persons: same phone + same full DOB, or the same
+    document number on approved checks; links chain, and linked records join the person.
 A6: verified facts from the KYC table/notes (not built yet)
 
 Never use another customer's records.
 """
 from . import fallbacks, names, normalize
-from .load import name_tokens, norm_key
+from .load import name_tokens, norm_key, phone_key
 from .models import Fact, Person, Resolution
 
 LINKS = ("account_ref", "login_handle", "email")
@@ -158,6 +159,111 @@ def search(alert, data):
     return [candidates[k] for k in sorted(candidates) if record_fits(alert, candidates[k])]
 
 
+# --- one person, one picture (principle 3) -----------------------------------------------
+
+def _phones(rec, data) -> set:
+    """The record's phone plus the phones on its own accounts, as digit strings."""
+    rid = rec["record_id"]
+    phones = {phone_key(rec.get("phone"))}
+    phones |= {phone_key(a.get("phone")) for a in data.accounts_by_customer.get(rid, ())}
+    return phones - {""}
+
+
+def applicant_ids(rid, data) -> list:
+    """KYC applicant IDs of a customer record, via onboarding (by customer and by account)."""
+    apps = {o.get("kyc_applicant_id") for o in data.onboarding_by_customer.get(rid, ())}
+    for acc in data.accounts_by_customer.get(rid, ()):
+        for o in data.onboarding_by_account.get(norm_key(acc.get("account_id")), ()):
+            if o.get("customer_id") in (None, "", rid):
+                apps.add(o.get("kyc_applicant_id"))
+    return sorted(a for a in apps if a)
+
+
+def is_approved(check) -> bool:
+    return str(check.get("result") or "").strip().casefold() == "approved"
+
+
+def approved_checks(rid, data) -> list:
+    """The record's approved KYC-table checks, oldest first. Rejected/expired are not evidence."""
+    checks = [c for app in applicant_ids(rid, data) for c in data.kyc_by_applicant.get(app, ())
+              if is_approved(c)]
+    return sorted(checks, key=lambda c: (str(c.get("checked_at") or ""), str(c.get("check_id"))))
+
+
+def _same_person_links(rec, data):
+    """(other record_id, why) for records that are the same person as rec.
+
+    Same phone AND the same full date of birth, or the same document number on
+    approved checks. A shared phone or address alone is not enough (families share them).
+    """
+    rid = rec["record_id"]
+    dob = parse_date(rec.get("dob"))
+    if fallbacks.full_date(dob):
+        for phone in sorted(_phones(rec, data)):
+            for other in data.customers_by_phone.get(phone, ()):
+                if other["record_id"] != rid and parse_date(other.get("dob")) == dob:
+                    yield other["record_id"], "phone+dob"
+    for check in approved_checks(rid, data):
+        doc = norm_key(check.get("document_number"))
+        if not doc:
+            continue
+        for other_check in data.kyc_by_document.get(doc, ()):
+            if not is_approved(other_check):
+                continue
+            for o in data.onboarding_by_applicant.get(other_check.get("applicant_id"), ()):
+                if o.get("customer_id") and o["customer_id"] != rid and o["customer_id"] in data.customers:
+                    yield o["customer_id"], "document"
+
+
+def group_into_persons(records, data, path) -> list:
+    """Group the fitting records into persons; pull in every record linked to them.
+
+    Returns a list of record lists, one per person, sorted by first record_id.
+    """
+    parent = {}
+
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    def union(a, b):
+        ra, rb = find(a), find(b)
+        if ra != rb:
+            parent[max(ra, rb)] = min(ra, rb)
+
+    queue = sorted(r["record_id"] for r in records)
+    for rid in queue:
+        parent[rid] = rid
+    seen = set(queue)
+    i = 0
+    while i < len(queue):
+        rid = queue[i]
+        i += 1
+        for other, _why in _same_person_links(data.customers[rid], data):
+            if other not in parent:
+                parent[other] = other
+            union(rid, other)
+            if other not in seen:
+                seen.add(other)
+                queue.append(other)
+
+    groups = {}
+    for rid in sorted(parent):
+        groups.setdefault(find(rid), []).append(rid)
+    persons = sorted(groups.values(), key=lambda ids: ids[0])
+
+    merged = [ids for ids in persons if len(ids) > 1]
+    if merged:
+        path.append("same phone and date of birth, or same document number on approved checks -> "
+                    + "; ".join("one person: " + ", ".join(ids) for ids in merged))
+    if len(persons) > 1:
+        path.append(f"{len(persons)} different people fit (records "
+                    + ", ".join(r for ids in persons for r in ids) + "); each is decided separately")
+    return [[data.customers[r] for r in ids] for ids in persons]
+
+
 # --- building persons -----------------------------------------------------------------
 
 def _person_from_records(records, data) -> Person:
@@ -213,6 +319,6 @@ def resolve(alert: dict, data) -> Resolution:
         path.append("name, date of birth, country and city -> customers -> "
                     + (", ".join(ids) if ids else "no record fits"))
 
-    # A4 will group records into persons; until then each record is its own person.
-    persons = [_person_from_records([r], data) for r in chosen]
+    groups = group_into_persons(chosen, data, path) if chosen else []
+    persons = [_person_from_records(records, data) for records in groups]
     return Resolution(alert_id=alert["alert_id"], persons=persons, path=path)

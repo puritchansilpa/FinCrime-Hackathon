@@ -120,7 +120,7 @@ class ResolveTests(unittest.TestCase):
     def test_joint_account_nobody_fits_keeps_all(self):
         res = resolve(alert("A3", "Someone Else", None, account_ref="ACC-J"), self.data)
         self.assertEqual(self.ids(res), [["CUS-10"], ["CUS-11"]])
-        self.assertIn("fit none of them", res.path[-1])
+        self.assertIn("fit none of them", " ".join(res.path))
 
     def test_joint_account_several_fit_keeps_them(self):
         res = resolve(alert("A4", "Lima", None, account_ref="ACC-L"), self.data)
@@ -149,7 +149,9 @@ class ResolveTests(unittest.TestCase):
     def test_search_uses_name_dob_country_and_city(self):
         a = alert("S1", "Christopher Paul George", "1951-09-17", country="Netherlands", city="Munich")
         res = resolve(a, self.data)
-        self.assertEqual(self.ids(res), [["CUS-40"]])   # CUS-41: Chicago; CUS-42: other DOB
+        # The search finds CUS-40 only (CUS-41 lives in Chicago, CUS-42 has another DOB);
+        # CUS-41 then joins as the same person: same phone and same full date of birth.
+        self.assertEqual(self.ids(res), [["CUS-40", "CUS-41"]])
         self.assertIn("name, date of birth, country and city -> customers -> CUS-40", res.path[0])
 
     def test_search_country_accepts_codes_and_demonyms(self):
@@ -174,7 +176,7 @@ class ResolveTests(unittest.TestCase):
         res = resolve(alert("S6", "Lima", None, account_ref="ACC-L", country="Spain"), self.data)
         self.assertEqual(len(res.persons), 2)
         res = resolve(alert("S7", "Lima", None, account_ref="ACC-L", country="France"), self.data)
-        self.assertIn("fit none of them", res.path[-1])
+        self.assertIn("fit none of them", " ".join(res.path))
 
     def test_person_facts_carry_their_source(self):
         person = resolve(alert("A11", "Luca Morillo", "1940", account_ref="ACC-J"), self.data).persons[0]
