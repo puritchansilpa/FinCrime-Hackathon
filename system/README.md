@@ -35,6 +35,7 @@ alerts ─► load ─► resolve(alert) ─────────────
 | `load.py` | A | Reads the JSON Lines files in the official format (screened customer nested under `customer`, arrays, `groups` in `name_variants.json`), also accepts flat or `; `-joined variants and hits inside alerts, allows missing files, and builds every lookup index. |
 | `customer.py` | A | Alert → customer records → persons → `Person` with sourced facts. |
 | `notes_parse.py` | A | Reads identity checks and residence history out of free-text notes. |
+| `templates.py` | A | Template learner for kyc notes: when the regex misses a fact, reads the note by its masked shape (`templates.json`, learned from dev; a new shape gets one `--llm` call). `tools/bench.py` scores it. |
 | `fallbacks.py` | A | A's stand-ins for dates, countries and name matching, written to the SOP; used only where B's functions return nothing. |
 | `llm.py` | A | Optional xAI LLM client; only reads notes the regex could not. |
 | `__main__.py` | A | Runs every hit and writes the output. A hit that crashes becomes `REVIEW`, never a clearance. |

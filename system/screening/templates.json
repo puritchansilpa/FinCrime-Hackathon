@@ -1,0 +1,1344 @@
+{
+ "about": "kyc note templates learned from the dev notes by the regex parser (see templates.py). Regenerate: python3 -m screening.templates <data folder>",
+ "kyc_notes": 22575,
+ "notes_covered": 20198,
+ "skipped_shapes": 15,
+ "templates": {
+  "<DATE> confirmed<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-82B533",
+   "result": "approved",
+   "roles": [
+    "dob",
+    "check_date",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "<DATE> dob<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 356,
+   "example": "NOTE-006A30",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "<DATE> of<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 8,
+   "example": "NOTE-025BA7",
+   "result": "approved",
+   "roles": [
+    "dob",
+    "check_date",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "<DATE> on<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 976,
+   "example": "NOTE-00DF8D",
+   "result": "approved",
+   "roles": [
+    "dob",
+    "check_date",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "<DATE> recorded<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-A8690C",
+   "result": "approved",
+   "roles": [
+    "dob",
+    "check_date",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "<DATE> the<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 2,
+   "example": "NOTE-DBED11",
+   "result": "approved",
+   "roles": [
+    "dob",
+    "check_date",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "<DATE> updated<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-69522D",
+   "result": "approved",
+   "roles": [
+    "dob",
+    "check_date",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "a<DATE> as<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-50222B",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "as<DATE> on<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 4,
+   "example": "NOTE-230ED4",
+   "result": "approved",
+   "roles": [
+    "dob",
+    "check_date",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "birth<DATE> on<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 56,
+   "example": "NOTE-072F2E",
+   "result": "approved",
+   "roles": [
+    "dob",
+    "check_date",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "born<DATE> a<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-8A3A17",
+   "result": "approved",
+   "roles": [
+    "dob",
+    "check_date",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "born<DATE> completed<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 3,
+   "example": "NOTE-57D539",
+   "result": "approved",
+   "roles": [
+    "dob",
+    "check_date",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "born<DATE> date<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-CA680E",
+   "result": "approved",
+   "roles": [
+    "dob",
+    "check_date",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "born<DATE> dated<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 4,
+   "example": "NOTE-03B1F9",
+   "result": "approved",
+   "roles": [
+    "dob",
+    "check_date",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "born<DATE> effective<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 2,
+   "example": "NOTE-77F240",
+   "result": "approved",
+   "roles": [
+    "dob",
+    "check_date",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "born<DATE> her<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-FBA78C",
+   "result": "approved",
+   "roles": [
+    "dob",
+    "check_date",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "born<DATE> obtained<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-57D467",
+   "result": "approved",
+   "roles": [
+    "dob",
+    "check_date",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "born<DATE> of<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 32,
+   "example": "NOTE-03D5A2",
+   "result": "approved",
+   "roles": [
+    "dob",
+    "check_date",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "born<DATE> on<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 3042,
+   "example": "NOTE-00009B",
+   "result": "approved",
+   "roles": [
+    "dob",
+    "check_date",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "born<DATE> on<DATE> ; <NAME> for<NAME> ; 1<COUNTRY> | ": {
+   "count": 1,
+   "example": "NOTE-E6AECC",
+   "result": "approved",
+   "roles": [
+    "dob",
+    "check_date",
+    "other",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "born<DATE> the<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 5,
+   "example": "NOTE-42DD89",
+   "result": "approved",
+   "roles": [
+    "dob",
+    "check_date",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "cleared<DATE> dob<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-170718",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "completed<DATE> born<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 2,
+   "example": "NOTE-1B91CC",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "completed<DATE> dob<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 4,
+   "example": "NOTE-6461CE",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "completed<DATE> of<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-16EC8D",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "confirmed<DATE> date<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-31B5C4",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "confirmed<DATE> dob<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-FFF6D7",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "confirmed<DATE> on<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 2,
+   "example": "NOTE-BA3133",
+   "result": "approved",
+   "roles": [
+    "dob",
+    "check_date",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "date<DATE> dob<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-2635D2",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "dated<DATE> as<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-2791AE",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "dated<DATE> born<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 3,
+   "example": "NOTE-2323FC",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "dated<DATE> dob<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 6,
+   "example": "NOTE-3DF92A",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "dated<DATE> of<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 3,
+   "example": "NOTE-1C9DF8",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "dob<DATE> a<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-831173",
+   "result": "approved",
+   "roles": [
+    "dob",
+    "check_date",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "dob<DATE> completed<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 2,
+   "example": "NOTE-B84FD3",
+   "result": "approved",
+   "roles": [
+    "dob",
+    "check_date",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "dob<DATE> dated<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 8,
+   "example": "NOTE-1BFFF8",
+   "result": "approved",
+   "roles": [
+    "dob",
+    "check_date",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "dob<DATE> of<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 400,
+   "example": "NOTE-002D6E",
+   "result": "approved",
+   "roles": [
+    "dob",
+    "check_date",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "dob<DATE> on<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 6463,
+   "example": "NOTE-000183",
+   "result": "approved",
+   "roles": [
+    "dob",
+    "check_date",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "dob<DATE> performed<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-D7ADF2",
+   "result": "approved",
+   "roles": [
+    "dob",
+    "check_date",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "dob<DATE> the<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 6,
+   "example": "NOTE-1C054D",
+   "result": "approved",
+   "roles": [
+    "dob",
+    "check_date",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "dob<YEAR> on<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-F9E521",
+   "result": "approved",
+   "roles": [
+    "dob",
+    "check_date",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "finalized<DATE> born<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-4FB0E4",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "finalized<DATE> dob<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 2,
+   "example": "NOTE-7F15ED",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "for<DATE> born<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-222A9D",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "for<DATE> dob<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-AB6707",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "from<DATE> <DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-FF8CD2",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "from<DATE> born<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 6,
+   "example": "NOTE-2941BB",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "from<DATE> dob<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 7,
+   "example": "NOTE-330683",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "from<DATE> of<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 2,
+   "example": "NOTE-04843E",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "her<DATE> on<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-D0852A",
+   "result": "approved",
+   "roles": [
+    "dob",
+    "check_date",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "is<DATE> of<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-7CD284",
+   "result": "approved",
+   "roles": [
+    "dob",
+    "check_date",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "is<DATE> on<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 24,
+   "example": "NOTE-00A0AF",
+   "result": "approved",
+   "roles": [
+    "dob",
+    "check_date",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "lists<DATE> of<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-16EF5D",
+   "result": "approved",
+   "roles": [
+    "dob",
+    "check_date",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "of<DATE> <DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 8,
+   "example": "NOTE-385298",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "of<DATE> a<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-2AAEE0",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "of<DATE> as<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 12,
+   "example": "NOTE-100317",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "of<DATE> birth<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-A16A9C",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "of<DATE> born<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 69,
+   "example": "NOTE-011BC5",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "of<DATE> date<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-A3FD11",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "of<DATE> dob<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 58,
+   "example": "NOTE-019C83",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "of<DATE> is<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 14,
+   "example": "NOTE-1D279C",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "on<DATE> <DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 166,
+   "example": "NOTE-014759",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "on<DATE> a<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 19,
+   "example": "NOTE-078E1B",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "on<DATE> and<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 13,
+   "example": "NOTE-010F33",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "on<DATE> as<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1099,
+   "example": "NOTE-000159",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "on<DATE> at<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-7A9D44",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "on<DATE> birth<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 377,
+   "example": "NOTE-0066E7",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "on<DATE> born<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1600,
+   "example": "NOTE-003024",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "on<DATE> born<DATE> ; 1<NAME> ; an<COUNTRY> note<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-B67C4D",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "other",
+    "other"
+   ],
+   "source": "regex"
+  },
+  "on<DATE> born<YEAR> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-5A8775",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "on<DATE> cites<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-39463E",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "on<DATE> confirming<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 2,
+   "example": "NOTE-14971A",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "on<DATE> date<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 147,
+   "example": "NOTE-02F029",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "on<DATE> displaying<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-9E0A70",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "on<DATE> displays<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 2,
+   "example": "NOTE-6A6539",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "on<DATE> dob<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 4101,
+   "example": "NOTE-000142",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "on<DATE> dob<DATE> ; for<NAME> <NAME> ; 1<COUNTRY> | ": {
+   "count": 1,
+   "example": "NOTE-F0BE01",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "other",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "on<DATE> dob<YEAR> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-A21877",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "on<DATE> document<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-3A7973",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "on<DATE> documenting<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-14B641",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "on<DATE> her<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 10,
+   "example": "NOTE-011300",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "on<DATE> his<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 13,
+   "example": "NOTE-0117AD",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "on<DATE> indicates<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-149BCD",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "on<DATE> is<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 705,
+   "example": "NOTE-0001E1",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "on<DATE> listing<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 5,
+   "example": "NOTE-44F5E0",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "on<DATE> lists<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 14,
+   "example": "NOTE-011465",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "on<DATE> matches<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-94BCFD",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "on<DATE> noted<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-30780E",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "on<DATE> noting<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-14C5A0",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "on<DATE> of<YEAR> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-3CE83C",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "on<DATE> on<DATE> ; <NAME> for<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-9B8F2B",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "other",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "on<DATE> recorded<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 2,
+   "example": "NOTE-1386F6",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "on<DATE> showing<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 10,
+   "example": "NOTE-149FF8",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "on<DATE> shows<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 4,
+   "example": "NOTE-5AA1E0",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "on<DATE> specifies<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 2,
+   "example": "NOTE-54AA94",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "on<DATE> the<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 4,
+   "example": "NOTE-049F03",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "on<DATE> with<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-C7957C",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "performed<DATE> dob<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 2,
+   "example": "NOTE-7F30F9",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "provider<DATE> document<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 243,
+   "example": "NOTE-002E67",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "showing<DATE> on<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-A6BAEC",
+   "result": "approved",
+   "roles": [
+    "dob",
+    "check_date",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "the<DATE> <DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 2,
+   "example": "NOTE-C16931",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "the<DATE> and<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-42D15B",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "the<DATE> born<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 3,
+   "example": "NOTE-2E45B6",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "the<DATE> dob<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 6,
+   "example": "NOTE-2E59CE",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "the<DATE> his<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-01F1E2",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "the<DATE> is<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-500951",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "the<DATE> of<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 4,
+   "example": "NOTE-02378E",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "to<DATE> on<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-7AD830",
+   "result": "approved",
+   "roles": [
+    "dob",
+    "check_date",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "verified<DATE> as<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-F17D40",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "verified<DATE> date<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-F15A21",
+   "result": "approved",
+   "roles": [
+    "check_date",
+    "dob",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  },
+  "whose<DATE> on<DATE> ; 1<NAME> ; 1<COUNTRY> | S": {
+   "count": 1,
+   "example": "NOTE-4917AA",
+   "result": "approved",
+   "roles": [
+    "dob",
+    "check_date",
+    "name",
+    "doc_country"
+   ],
+   "source": "regex"
+  }
+ }
+}
