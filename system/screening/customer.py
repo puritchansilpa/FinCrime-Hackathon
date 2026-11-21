@@ -12,11 +12,13 @@ A3: no link -> search for the records that fit what was screened:
     or nationality, and the screened city in the record's city or address.
 A4: group the fitting records into persons: same phone + same full DOB, or the same
     document number on approved checks; links chain, and linked records join the person.
-A6: verified facts from the KYC table/notes (not built yet)
+A6: build each Person: declared facts from every record; verified name, DOB and document
+    country from the most recent APPROVED check (KYC table or kyc note); countries from
+    records, the document and residence notes. Every fact keeps its source record ID.
 
 Never use another customer's records.
 """
-from . import fallbacks, names, normalize
+from . import fallbacks, llm, names, normalize, notes_parse
 from .load import name_tokens, norm_key, phone_key
 from .models import Fact, Person, Resolution
 
@@ -266,11 +268,78 @@ def group_into_persons(records, data, path) -> list:
 
 # --- building persons -----------------------------------------------------------------
 
+def _date_key(d):
+    """Sort key for a PartialDate (unknown parts sort first)."""
+    if d is None:
+        return (0, 0, 0)
+    return (d.year or 0, d.month or 0, d.day or 0)
+
+
+def _notes_for(rec, data) -> list:
+    return data.notes_by_email.get(norm_key(rec.get("email")), []) if rec.get("email") else []
+
+
+def _parsed_kyc_note(note):
+    """Parse once per note (several alerts can resolve to the same customer)."""
+    cache = _parsed_kyc_note.cache
+    key = (note["note_id"], note.get("text"), note.get("created_at"), note.get("channel"), llm.enabled())
+    if key not in cache:
+        parsed = None
+        text = note.get("text") or ""
+        is_kyc = str(note.get("channel") or "").casefold() == "kyc"
+        p = notes_parse.parse_kyc_note(text, note.get("created_at"))
+        # Outside the kyc channel, only a note that clearly records a check counts.
+        if p and (is_kyc or (p["dob"] and p["name"] and (p["provider"] or p["doc_type"]))):
+            parsed = p
+        if parsed is None and is_kyc and llm.enabled():
+            parsed = llm.extract_kyc_note(text, note.get("created_at"))
+        cache[key] = parsed
+    return cache[key]
+
+
+_parsed_kyc_note.cache = {}
+
+
+def verified_checks(records, data) -> list:
+    """Every APPROVED identity check of the person, newest first, as dicts:
+    {source_id, origin, checked_at, name, dob, doc_country}. KYC table and kyc notes alike.
+    Rejected, expired or unreadable results are not evidence.
+    """
+    checks = []
+    for rec in records:
+        for c in approved_checks(rec["record_id"], data):
+            checks.append({
+                "source_id": c["check_id"], "origin": "verified_kyc",
+                "checked_at": parse_date(c.get("checked_at")),
+                "name": c.get("verified_name") or None,
+                "dob": parse_date(c.get("verified_dob")),
+                "doc_country": to_country(c.get("document_country")),
+            })
+        for note in _notes_for(rec, data):
+            p = _parsed_kyc_note(note)
+            if not p or p.get("result") != "approved":
+                continue
+            checks.append({
+                "source_id": note["note_id"], "origin": "verified_note",
+                "checked_at": p.get("checked_at") or parse_date(note.get("created_at")),
+                "name": p.get("name"),
+                "dob": p.get("dob"),
+                "doc_country": p.get("doc_country"),
+            })
+    # newest first; ties broken by source kind and ID so the order never depends on input order
+    checks.sort(key=lambda c: (_date_key(c["checked_at"]), c["origin"] == "verified_kyc", c["source_id"]),
+                reverse=True)
+    return checks
+
+
 def _person_from_records(records, data) -> Person:
     """One Person from records already known to be the same person.
 
-    Fills the declared facts on the records; A6 adds the verified check
-    (KYC table or kyc note) and residence-note countries.
+    Declared facts come from every record. The verified name, date of birth and
+    document country come from the most recent approved identity check (KYC table or
+    kyc note); a field the newest check does not give is taken from the next newest.
+    Countries: residence and nationality on all records, the verified document country,
+    and countries the notes say the customer lived or worked in.
     """
     records = sorted(records, key=lambda r: r["record_id"])
     declared_names, declared_dobs, countries = [], [], []
@@ -286,13 +355,42 @@ def _person_from_records(records, data) -> Person:
             c = to_country(r.get(f))
             if c:
                 countries.append(Fact(c, rid, f))
+
+    checks = verified_checks(records, data)
+
+    def newest(field):
+        for c in checks:
+            if c[field]:
+                return Fact(c[field], c["source_id"], c["origin"])
+        return None
+
+    verified_name, verified_dob, doc_country = newest("name"), newest("dob"), newest("doc_country")
+    if doc_country:
+        countries.append(Fact(doc_country.value, doc_country.source_id, "document_country"))
+
+    for r in records:
+        for note in _notes_for(r, data):
+            if str(note.get("channel") or "").casefold() == "kyc":
+                continue
+            for c in notes_parse.parse_residence_note(note.get("text") or ""):
+                countries.append(Fact(c, note["note_id"], "residence_note"))
+
+    # drop exact repeats (e.g. the same residence note read twice), keep order stable
+    seen, unique = set(), []
+    for f in countries:
+        if f not in seen:
+            seen.add(f)
+            unique.append(f)
+
     types = sorted({r.get("entity_type") for r in records if r.get("entity_type")})
     return Person(
         record_ids=[r["record_id"] for r in records],
         entity_type=types[0] if types else "",
+        verified_name=verified_name,
+        verified_dob=verified_dob,
         declared_names=declared_names,
         declared_dobs=declared_dobs,
-        countries=countries,
+        countries=unique,
     )
 
 
