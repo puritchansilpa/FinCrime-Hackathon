@@ -105,6 +105,16 @@ class TestClear(unittest.TestCase):
         d = decide(p, hit(names=("Lopez Holdings",), kind=COMPANY, report=D(2019, 5, 1)), ALERT, V)
         self.assertNotEqual(d.reason_code, TEMPORAL_IMPOSSIBILITY)
 
+    def test_placeholder_hit_name_cannot_clear(self):
+        """N/A, TEST, UNKNOWN and blanks are missing names, not a mismatch (ADV-H-110)."""
+        for name in ("N/A", "NA", "TEST", "UNKNOWN", "XXX", "   ", ""):
+            d = decide(person(), hit(names=(name,), dobs=(D(1980, 5, 1),)), ALERT, V)
+            self.assertEqual(d.decision, REVIEW, name)
+            self.assertNotEqual(d.reason_code, NAME_MISMATCH_VERIFIED, name)
+        # a real alias still can; a placeholder alias beside it does not block that
+        d = decide(person(), hit(names=("N/A", "Someone Else"), dobs=(D(1980, 5, 1),)), ALERT, V)
+        self.assertEqual((d.decision, d.reason_code), (DIFFERENT, NAME_MISMATCH_VERIFIED))
+
     def test_dob_mismatch_cites_dob_source(self):
         d = decide(person(vdob=D(1995, 12, 17)), hit(dobs=[frozenset({1986, 1987})]), ALERT, V)
         self.assertEqual((d.decision, d.reason_code, d.evidence), (DIFFERENT, DOB_MISMATCH, ["KYC-1"]))

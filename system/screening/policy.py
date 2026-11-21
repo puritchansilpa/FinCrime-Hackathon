@@ -144,18 +144,29 @@ class NameResult:
     hit: Optional[Fact] = None
 
 
+def _named(facts, company, variants, minimum):
+    """Facts that still have real name parts. Placeholders and blanks are missing, not names."""
+    out = []
+    for fact in facts:
+        if fact.value and str(fact.value).strip() and len(real_parts(fact.value, company, variants)) >= minimum:
+            out.append(fact)
+    return out
+
+
 def assess_name(cv: CustomerView, hp: HitProfile, variants: Optional[Variants]) -> NameResult:
     company = cv.entity_type == COMPANY
-    usable = [f for f in cv.name_facts if f.value and
-              len(real_parts(f.value, company, variants)) >= (1 if company else 2)]
-    if not usable or not hp.names:
+    usable = _named(cv.name_facts, company, variants, 1 if company else 2)
+    # A hit whose every name is N/A, TEST, UNKNOWN or blank has no name. That cannot
+    # contradict the customer (ADV-H-110); it is missing, so the hit stays review.
+    hit_names = _named(hp.names, company, variants, 1)
+    if not usable or not hit_names:
         return NameResult(UNKNOWN)
     for cf in usable:
-        for hf in hp.names:
+        for hf in hit_names:
             if names_agree(cf.value, hf.value, variants, company):
                 return NameResult(AGREE, cf, hf)
     if cv.verified_name is not None and cv.verified_name in usable:
-        return NameResult(CONTRADICT, cv.verified_name, hp.names[0])
+        return NameResult(CONTRADICT, cv.verified_name, hit_names[0])
     return NameResult(NEITHER)          # declared names only: no agreement, but no contradiction
 
 
