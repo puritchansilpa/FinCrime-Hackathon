@@ -1,0 +1,5 @@
+#!/bin/sh
+# Usage: system/run <data folder> <output file>
+# Python 3 standard library only. No network access unless --llm is added later.
+DIR="$(cd "$(dirname "$0")" && pwd)"
+exec env PYTHONPATH="$DIR" PYTHONHASHSEED=0 python3 -m screening "$@"

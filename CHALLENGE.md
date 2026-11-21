@@ -214,7 +214,7 @@ flowchart LR
 
 `POLICY.md`, `alerts.jsonl`, `hits.jsonl`, `customers.jsonl`, `accounts.jsonl`, `onboarding.jsonl`, `kyc_checks.jsonl`, `notes.jsonl`, `search_results.jsonl`, `name_variants.json`, `practice_labels.jsonl`, `validate.py`.
 
-We don't have the real files. `dev/` is rebuilt from the browse workbook by `tools/xlsx_to_jsonl.py` (see `dev/CONVERSION_NOTES.md`). `validate.py` is still missing.
+The official files are in `dev/`, and the organisers' `validate.py` and `output.schema.json` are at the repo root. The full official brief is `OFFICIAL_README.md`.
 
 ### Rules from the brief
 

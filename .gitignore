@@ -1,9 +1,14 @@
-# NOTE: dev/ and the brief .docx are committed while this repo is PRIVATE.
-# The brief forbids publishing the dev data: before making the repo public,
+# NOTE: dev/ (the official data room files) and the brief .docx are committed while this
+# repo is PRIVATE. The brief forbids publishing the dev data: before making the repo public,
 # submit from a fresh repo (system/ + output/ only) or purge dev/ from history.
 
-# Event workbook (dev/ is rebuilt from it)
+# Pasted copy of the data room kit; its files now live at the repo root (dev/, validate.py, …)
+/screening/
+
+# Browse workbooks (read-only views of dev/)
 *.xlsx
+# Office lock files
+~$*
 
 # Secrets
 .env

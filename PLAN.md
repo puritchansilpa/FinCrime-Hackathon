@@ -52,16 +52,31 @@ A bank's name screening raises **alerts**. Each alert has one or more **hits**, 
 
 ## 2. Current repo state
 
-- `CHALLENGE.md` holds the task, deliverable and scoring, summarised from the event brief.
-- `tools/xlsx_to_jsonl.py` rebuilds `dev/` from `Screening Dev Set - browse.xlsx`. We never received the data room's real JSONL files or `validate.py`.
-  - **Setup:** `python3 tools/xlsx_to_jsonl.py "Screening Dev Set - browse.xlsx" dev` (needs `openpyxl`; dev-only tool).
-  - **Output:** `alerts, hits, customers, accounts, onboarding, kyc_checks, notes, search_results, practice_labels` `.jsonl`, plus `POLICY.md` and `name_variants.json`.
-  - **Caveats:**
-    - List fields are `; `-joined strings, and the real files may use arrays.
-    - Two hits (`H-33106C`, `H-E7BFE8`) have profile notes cut at 32k characters.
-    - The layout of `name_variants.json` is our guess: `{"name_variants": [[...]], "company_legal_forms": [...]}`.
-- `dev/` and the brief (`Screening — Brief v3 (same person or not).docx`) are **committed while the repo is private**. `.gitignore` excludes `*.xlsx` and `.env`.
-- **No system code exists yet.**
+- **The repo follows the official data room kit layout**, so the kit README's commands run as written:
+
+  ```
+  dev/                  official data room files (JSONL, POLICY.md, name_variants.json)
+  system/run            our entry point: system/run <data folder> <output file>
+  system/screening/     our code (Python 3 standard library only)
+  output/dev.jsonl      our predictions on dev
+  validate.py           the organisers' checker and scorer (unchanged)
+  output.schema.json    the output line schema (unchanged)
+  POLICY.md             the SOP (same as dev/POLICY.md)
+  OFFICIAL_README.md    the official brief (the kit's README.md)
+  tests/                unit tests
+  ```
+- **Data format facts** (verified against the official files):
+  - Alerts nest the screened details: `customer: {name, entity_type, dob, country, city}`. Read them with `normalize.screened_details(alert)`.
+  - Hit list fields are JSON arrays.
+  - `name_variants.json` is `{description, groups, company_legal_forms}`.
+  - Practice labels use lists for `reason_codes`, `customer_record_ids`, `evidence` and `path`.
+- `validate.py` accepts evidence items that are record IDs, URLs, or hit fields as `H-XXXXXX#field`.
+- `dev/` and the brief (`Screening — Brief v3 (same person or not).docx`) are **committed while the repo is private**. `.gitignore` excludes `*.xlsx`, `.env`, Office lock files and the pasted `/screening/` kit copy.
+- **System status:** the pipeline runs end to end.
+  - **Placeholder customer lookup:** `customer.py` is A's file and will be replaced. It only follows links, but it already reads KYC and residence notes.
+  - **Performance:** 819 hits in about 1 second; the output is byte-identical across runs.
+  - **`validate.py --score`:** 0 problems, 40/50 decisions, **0 unsafe clearances**, decision score 74.1.
+  - **The 10 misses are all alerts with no link** (A3: customer search).
 
 ## 3. Decisions already made
 
@@ -272,13 +287,29 @@ class Decision:               # [built by B]
 | A | `customer.resolve(alert, data) -> Resolution` | |
 | A | `notes_parse.parse_kyc_note(text) -> dict \| None` | Keys: name, dob, doc_country, provider, checked_at, result |
 | A | `notes_parse.parse_residence_note(text) -> list[str]` | Returns countries |
-| B | `normalize.parse_date(s) -> PartialDate \| None` | |
-| B | `normalize.to_country(s) -> str \| None` | |
-| B | `normalize.name_parts(s, is_company) -> list[str]` | |
-| B | `names.names_agree(a, b) -> bool` | |
-| B | `hit.build_hit(hit_row, data) -> HitProfile` | |
-| B | `policy.decide(person \| None, hp, alert) -> Decision` | |
-| B | `policy.combine(list[Decision], hp) -> Decision` | |
+| B ✅ | `normalize.parse_date(s) -> PartialDate \| None` | ISO, day-first `DD/MM/YYYY`, `17 June 1976`, `June 17, 1976`, `1976`, `1976-06`, `2016/7/8` |
+| B ✅ | `normalize.parse_date_list(v)`, `normalize.dates_compatible(a, b)`, `normalize.age_at(birth, on)` | List fields; "every part both give is equal" (use it for screened DOB vs record DOB) |
+| B ✅ | `normalize.to_country(s) -> str \| None`, `normalize.to_countries(v)` | Names, ISO2/ISO3, demonyms, `[Residency]` tags, last part of a place. `International`/`Europe` → None |
+| B ✅ | `normalize.find_countries(text, ignore_names=()) -> list[str]` | **A: use this in the note parsers** ("Nigerian passport", "lived in the Netherlands"). Pass the person's name in `ignore_names` |
+| B ✅ | `normalize.name_parts(s, is_company, legal_forms)`, `normalize.split_list(v)` | `split_list` accepts a JSON array or a `; `-joined string |
+| B ✅ | `names.Variants.load(data_folder)`, `names.names_agree(a, b, variants, is_company)` | **A: load `Variants` once and use `names_agree` for the no-link customer search** |
+| B ✅ | `hit.build_hit(hit_row, data) -> HitProfile` | Needs `data.search_by_query` (dict: the raw `query` field → result rows), or that dict passed directly |
+| B ✅ | `policy.decide(person \| None, hp, alert, variants) -> Decision` | |
+| B ✅ | `policy.combine(decisions, hp, persons) -> Decision` | |
+| B ✅ | `policy.decide_alert_hit(persons, hp, alert, variants) -> Decision` | **What `__main__` should call** for each hit: handles no person, one person, and several people |
+
+**What B expects in each `Person` (A builds it):**
+- `verified_name` / `verified_dob`: from the **most recent approved** check, whether that is a KYC-table row or a kyc-channel note. `source_id` is the `KYC-…` or `NOTE-…` ID.
+- `declared_names`: the record's full, preferred and login names (`source_id` = `CUS-…`).
+- `declared_dobs`: the record's dates of birth.
+- `countries`: one `Fact` per (country, source), from:
+  - residence and nationality on every record (`CUS-…`)
+  - the approved check's document country (`KYC-…`/`NOTE-…`)
+  - countries the residence notes say the person lived in (`NOTE-…`)
+
+  The policy cites these `source_id`s as evidence, so they must be exact.
+
+**B status:** B1–B6 are done (71 unit tests in `tests/`). With an oracle customer built from each label's `customer_record_ids`, B scores 48/48 decisions, 48/48 reason codes, 0 unsafe clearances, and evidence precision and recall of 1.00. The 2 ambiguous labels need A's resolver.
 
 **Kickoff (both, about 30 minutes):**
 1. Agree on and commit `models.py`.
@@ -380,7 +411,7 @@ class Decision:               # [built by B]
 - Edit only the files your workstream owns. Change `models.py` only by agreement, in its own small PR.
 - `dev/` and the brief are committed **only while the repo is private**. The brief forbids publishing the dev data. Before going public, submit from a fresh repo containing only `system/` and `output/`, or purge `dev/` from history (`git filter-repo --path dev --invert-paths`).
 - Never commit `.env` or the API key.
-- `dev/` is in the repo, so no need to regenerate it. `tools/xlsx_to_jsonl.py` stays for rebuilding it from the workbook.
+- `dev/` holds the official data room files. Don't edit them, and don't edit `validate.py` either.
 
 ## 7. Open questions and risks
 
@@ -390,16 +421,16 @@ class Decision:               # [built by B]
   - month-only dated reports
   - overlapping variant groups (`joseph` is in two groups)
   - whether a verified name can come from a kyc note (the SOP says yes for approved checks recorded in notes)
-- **The real JSONL may differ in shape** (arrays, embedded hits). The loader accepts both forms.
-- **Still missing:** the data room's real JSONL and `validate.py`, and an OpenRouter key for build-time testing.
+- **The unseen set may differ in shape** (arrays or `; `-joined strings, nested or flat alert details). The loader and `split_list` / `screened_details` accept both.
+- **Still missing:** an OpenRouter key, needed only if we try the optional LLM layer.
 
-## 8. Verification
+## 8. Verification (the official pipeline)
 
-- `python3 -m unittest discover tests`
-- `system/run dev output/dev.jsonl`, under 1 minute expected (72k records in memory).
-- `python3 tools/score.py output/dev.jsonl dev/practice_labels.jsonl` reports:
-  - the decision score and unsafe clearances (must be 0)
-  - reason-code, customer-ID and evidence accuracy
-  - a per-hit diff
-- **Determinism:** run 5 times and `diff` the outputs; they must be byte-identical.
-- If `validate.py` turns up: `python3 validate.py output/dev.jsonl --score dev/practice_labels.jsonl`.
+```sh
+python3 -m unittest discover -s tests                                                  # unit tests
+system/run dev output/dev.jsonl                                                        # predictions (~1 s)
+python3 validate.py --data dev --output output/dev.jsonl --score dev/practice_labels.jsonl   # official check + score
+```
+
+- `validate.py` must report **0 problems** and **0 unsafe clearances**.
+- **Determinism:** run `system/run` 5 times and `cmp` the outputs; they must be byte-identical. `system/run` sets `PYTHONHASHSEED=0`, and every loop runs in sorted order.
