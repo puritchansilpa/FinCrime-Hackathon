@@ -159,7 +159,7 @@ mark.name{background:var(--mark-name)}mark.dob{background:var(--mark-dob)}mark.c
   var STATE_LABEL = { agree: "Agree", contradict: "Contradicts", unknown: "Unknown", neither: "No contradiction" };
 
   var m = DATA.meta, c = m.counts || {};
-  document.getElementById("runline").textContent = m.hits + " hits from " + m.data + " · built " + m.built;
+  document.getElementById("runline").textContent = m.hits + " hits from " + m.data + " · LLM " + (m.llm || "off") + " · built " + m.built;
   updateDecCount();
 
   // ---------------- queue ----------------

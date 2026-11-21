@@ -6,7 +6,9 @@
 
 It re-runs the pipeline's own readers (customer resolution, hit facts, policy checks) so
 every fact on screen is the one the system used, with the record it came from. It embeds
-only the records the hits refer to.
+only the records the hits refer to. Like system/run, it uses the LLM when XAI_API_KEY is
+set (environment or repo-root .env) and not otherwise; --no-llm turns it off. Build with
+the same setting as the run you are explaining.
 
 The file contains the event's data, so it is written to build/ (gitignored): never commit
 or publish it. This tool is not part of system/run and cannot change any decision.
@@ -21,6 +23,7 @@ from collections import Counter
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "system"))
 
+from screening import __main__ as runner  # noqa: E402
 from screening import customer, hit as hit_mod, llm, notes_parse, policy, templates  # noqa: E402
 from screening.load import load_data  # noqa: E402
 from screening.models import COMPANY, PartialDate  # noqa: E402
@@ -277,10 +280,10 @@ def practice_score(rows_by_hit, labels):
     return {"labels": len(labels), "right": right, "unsafe": unsafe}
 
 
-def build(data_dir, output_path, queue_path):
+def build(data_dir, output_path, queue_path, use_llm=False):
     data = load_data(data_dir)
     variants = Variants.load(data_dir)
-    llm.configure(False)
+    llm.configure(use_llm)            # same rule as system/run: on only with a key
     templates.configure(data.notes.values())
     out_rows = {r["hit_id"]: r for r in read_jsonl(output_path)}
     queue = {r["hit_id"]: r for r in read_jsonl(queue_path)}
@@ -349,10 +352,13 @@ def main(argv=None):
     ap.add_argument("--output", default=os.path.join(ROOT, "output", "dev.jsonl"))
     ap.add_argument("--queue", default=None, help="review_queue.jsonl (default: next to --output)")
     ap.add_argument("--out", default=os.path.join(ROOT, "build", "review_ui.html"))
+    ap.add_argument("--no-llm", action="store_true", help="never call the LLM (match a --no-llm run)")
     args = ap.parse_args(argv)
+    runner._load_dotenv()
     queue = args.queue or os.path.join(os.path.dirname(os.path.abspath(args.output)), "review_queue.jsonl")
     started = time.time()
-    payload = build(args.data, args.output, queue)
+    payload = build(args.data, args.output, queue, use_llm=not args.no_llm)
+    payload["meta"]["llm"] = "on (xAI)" if llm.enabled() else "off"
     with open(TEMPLATE, encoding="utf-8") as fh:
         html = fh.read()
     blob = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))

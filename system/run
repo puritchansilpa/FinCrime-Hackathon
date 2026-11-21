@@ -1,5 +1,6 @@
 #!/bin/sh
-# Usage: system/run <data folder> <output file> [--llm]
-# Python 3 standard library only. LLM features are off unless --llm is given.
+# Usage: system/run <data folder> <output file> [--no-llm]
+# Python 3 standard library only. The LLM is used automatically when XAI_API_KEY is set
+# (environment or .env at the repo root); without a key the run works the same, rules only.
 here="$(cd "$(dirname "$0")" && pwd)"
 PYTHONPATH="$here${PYTHONPATH:+:$PYTHONPATH}" PYTHONIOENCODING=utf-8 exec python3 -m screening "$@"
