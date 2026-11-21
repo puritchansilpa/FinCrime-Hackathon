@@ -130,3 +130,9 @@ def s_ambiguous(record_groups: List[List[str]], decisions: List[str]) -> str:
     people = "; ".join(", ".join(g) for g in record_groups)
     return (f"{len(record_groups)} different people in the system of record fit this alert ({people}). "
             f"They lead to different decisions ({', '.join(decisions)}), so the hit needs review.")
+
+
+def s_unresolved_places(places) -> str:
+    shown = "; ".join(sorted(places)[:3]) + ("; and others" if len(places) > 3 else "")
+    shown = shown[:1].upper() + shown[1:]
+    return f"{shown} could not be tied to a country, so the countries cannot rule the hit out."

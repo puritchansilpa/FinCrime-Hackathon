@@ -76,6 +76,7 @@ class Person:
     declared_names: List[Fact] = field(default_factory=list)  # full/preferred/login names on records
     declared_dobs: List[Fact] = field(default_factory=list)   # dob on the records (PartialDate values)
     countries: List[Fact] = field(default_factory=list)       # canonical country names, any source
+    unresolved_places: List[str] = field(default_factory=list)  # places we could not tie to a country
 
 
 @dataclass
@@ -98,6 +99,7 @@ class HitProfile:
     earliest_report: Optional[Fact] = None             # PartialDate of the earliest dated report
     death_date: Optional[Fact] = None                  # PartialDate
     countries: List[Fact] = field(default_factory=list)  # canonical country names tied to the hit
+    unresolved_places: List[str] = field(default_factory=list)  # places we could not tie to a country
 
 
 @dataclass

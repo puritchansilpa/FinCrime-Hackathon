@@ -86,6 +86,7 @@ class CustomerView:
     countries: List[Fact]
     screened_at: Optional[PartialDate]
     resolved: bool = True
+    unresolved: List[str] = field(default_factory=list)   # customer places with no known country
 
 
 def customer_view(person: Optional[Person], alert: dict) -> CustomerView:
@@ -121,6 +122,7 @@ def customer_view(person: Optional[Person], alert: dict) -> CustomerView:
         record_ids=sorted(person.record_ids), entity_type=_kind(person.entity_type),
         verified_name=person.verified_name, name_facts=names, dob_facts=dobs,
         countries=[f for f in person.countries if f.value], screened_at=screened_at,
+        unresolved=list(getattr(person, "unresolved_places", None) or []),
     )
 
 
@@ -187,17 +189,24 @@ class CountryResult:
     cust: List[str] = field(default_factory=list)
     hit: List[str] = field(default_factory=list)
     sources: List[str] = field(default_factory=list)
+    unresolved: List[str] = field(default_factory=list)   # places on either side with no known country
 
 
 def assess_countries(cv: CustomerView, hp: HitProfile) -> CountryResult:
+    """AGREE on a shared country. CONTRADICT only when every country tied to the customer
+    differs from every country tied to the hit, which can only be known when no place on
+    either side is unresolved; otherwise UNKNOWN (an unmapped place is never a mismatch)."""
     cust = sorted({f.value for f in cv.countries})
     hit = sorted({f.value for f in hp.countries})
+    unresolved = sorted(set(cv.unresolved) | set(getattr(hp, "unresolved_places", None) or []))
     if not cust or not hit:
-        return CountryResult(UNKNOWN, cust=cust, hit=hit)
+        return CountryResult(UNKNOWN, cust=cust, hit=hit, unresolved=unresolved)
     shared = sorted(set(cust) & set(hit))
     if shared:
         src = sorted({f.source_id for f in cv.countries if f.value in shared})
-        return CountryResult(AGREE, shared, cust, hit, src)
+        return CountryResult(AGREE, shared, cust, hit, src, unresolved)
+    if unresolved:
+        return CountryResult(UNKNOWN, [], cust, hit, [], unresolved)
     src = sorted({f.source_id for f in cv.countries})
     return CountryResult(CONTRADICT, [], cust, hit, src)
 
@@ -341,6 +350,8 @@ def decide(person: Optional[Person], hp: HitProfile, alert: dict,
         sentences.append(ex.s_shared_countries(loc.shared))
     if name.state == AGREE:
         sentences.append(ex.s_name_agrees(name.hit.value))
+    if loc.state == UNKNOWN and loc.unresolved and loc.cust and loc.hit:
+        sentences.append(ex.s_unresolved_places(loc.unresolved))
     sentences.append(ex.s_review_tail(_missing(cv, name, dob, loc, company)))
     ev = sorted(agree_ev) or list(cv.record_ids[:1])
     return Decision(hp.hit_id, hp.alert_id, REVIEW, INSUFFICIENT_DATA, _record_id(cv),

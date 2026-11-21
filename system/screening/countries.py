@@ -248,3 +248,108 @@ def _rows():
 
 
 ROWS = list(_rows())
+
+
+# ---------------------------------------------------------------------------
+# Cities and regions -> country, used only when a value names no country itself
+# ("London", "Lagos State", "Karachi"). Deliberately left out: names shared by
+# several countries or that are common words / first names (Valencia, Hyderabad,
+# Kingston, Georgia, Washington, Lima, Florence, Nice, Cambridge, Punjab, Perth,
+# Santiago, Alexandria, Victoria, Austin, Reading, Delta, Rivers, Plateau, ...).
+# A place that is not here stays unresolved, which is the safe outcome.
+# Each line: Country|place;place;...
+# ---------------------------------------------------------------------------
+
+_PLACES_RAW = """
+United Kingdom|London;Manchester;Liverpool;Leeds;Birmingham UK;Glasgow;Edinburgh;Cardiff;Belfast;Bristol;Sheffield;Nottingham;Leicester;Coventry;Southampton;Brighton;Bradford;High Wycombe;Buckinghamshire;Greater London;Yorkshire;Lancashire;Kent;Essex;Surrey;Merseyside;West Midlands
+United States|New York;New York City;NYC;Los Angeles;Chicago;Houston;Phoenix;Philadelphia;San Antonio;San Diego;Dallas;Atlanta;Miami;Boston;Seattle;Denver;Las Vegas;San Francisco;Detroit;Minneapolis;Baltimore;Pittsburgh;Cleveland;Honolulu;Brooklyn;Manhattan;Nashville;Orlando;New Orleans;Washington DC;Washington D.C.;District of Columbia;Alabama;Alaska;Arizona;Arkansas;California;Colorado;Connecticut;Delaware;Florida;Hawaii;Idaho;Illinois;Indiana;Iowa;Kansas;Kentucky;Louisiana;Maine;Maryland;Massachusetts;Michigan;Minnesota;Mississippi;Missouri;Montana;Nebraska;Nevada;New Hampshire;New Jersey;New Mexico;North Carolina;North Dakota;Ohio;Oklahoma;Oregon;Pennsylvania;Rhode Island;South Carolina;South Dakota;Tennessee;Texas;Utah;Vermont;Virginia;West Virginia;Wisconsin;Wyoming
+Canada|Toronto;Montreal;Montréal;Vancouver;Calgary;Ottawa;Edmonton;Winnipeg;Quebec City;Ontario;Quebec;Québec;British Columbia;Alberta;Manitoba;Saskatchewan;Nova Scotia;New Brunswick;Newfoundland and Labrador;St. John's
+Nigeria|Lagos;Abuja;Kano;Ibadan;Port Harcourt;Kaduna;Benin City;Enugu;Maiduguri;Sokoto;Jos;Onitsha;Abeokuta;Ilorin;Yobe;Kebbi;Borno;Ogun;Oyo;Kwara;Katsina;Zamfara;Bauchi;Anambra;Edo;Imo;Abia;Kogi;Gombe;Adamawa;Taraba;Benue;Nasarawa;Ekiti;Ondo;Osun;Jigawa;Akwa Ibom;Cross River;Ebonyi;Bayelsa;Birnin Kebbi;Federal Capital Territory
+Pakistan|Karachi;Lahore;Islamabad;Rawalpindi;Faisalabad;Peshawar;Multan;Quetta;Sialkot;Gujranwala;Sindh;Khyber Pakhtunkhwa;Balochistan;North Waziristan;Bannu
+India|Mumbai;Bombay;Delhi;New Delhi;Bangalore;Bengaluru;Chennai;Madras;Kolkata;Calcutta;Pune;Ahmedabad;Jaipur;Lucknow;Kanpur;Surat;Maharashtra;Telangana;Karnataka;Tamil Nadu;Kerala;Gujarat;Rajasthan;Uttar Pradesh;West Bengal;Bihar;Godavarikhani
+Bangladesh|Dhaka;Chittagong;Chattogram;Khulna;Rajshahi;Sylhet
+Germany|Berlin;Munich;München;Hamburg;Frankfurt;Frankfurt am Main;Cologne;Köln;Düsseldorf;Stuttgart;Leipzig;Dresden;Bremen;Hanover;Hannover;Nuremberg;Nürnberg;Bavaria;Bayern
+France|Paris;Lyon;Marseille;Toulouse;Nantes;Strasbourg;Bordeaux;Lille;Montpellier;Rennes;Île-de-France;Ile-de-France
+Spain|Madrid;Barcelona;Seville;Sevilla;Zaragoza;Málaga;Malaga;Bilbao;Catalonia;Cataluña;Andalusia;Andalucía
+Italy|Rome;Roma;Milan;Milano;Naples;Napoli;Turin;Torino;Palermo;Genoa;Genova;Bologna;Venice;Venezia;Lombardy;Lombardia;Sicily;Sicilia
+Netherlands|Amsterdam;Rotterdam;The Hague;Den Haag;Utrecht;Eindhoven
+Belgium|Brussels;Bruxelles;Antwerp;Antwerpen
+Austria|Vienna;Wien
+Switzerland|Zurich;Zürich;Geneva;Genève;Bern;Basel;Lausanne
+Sweden|Stockholm;Gothenburg;Göteborg;Malmö;Malmo
+Norway|Oslo;Bergen
+Denmark|Copenhagen;København;Aarhus
+Finland|Helsinki;Espoo
+Ireland|Dublin;Galway;Limerick
+Portugal|Lisbon;Lisboa;Porto
+Poland|Warsaw;Warszawa;Krakow;Kraków;Wrocław;Wroclaw;Gdańsk;Gdansk;Poznań;Poznan
+Czech Republic|Prague;Praha;Brno
+Hungary|Budapest
+Romania|Bucharest;București
+Greece|Athens;Thessaloniki
+Russia|Moscow;Moskva;Saint Petersburg;Novosibirsk;Yekaterinburg
+Ukraine|Kyiv;Kiev;Kharkiv;Odesa;Odessa;Lviv
+Turkey|Istanbul;Ankara;Izmir;İzmir
+United Arab Emirates|Dubai;Abu Dhabi;Sharjah
+Saudi Arabia|Riyadh;Jeddah;Mecca;Makkah;Medina
+Qatar|Doha
+Kuwait|Kuwait City
+Bahrain|Manama
+Oman|Muscat
+Iran|Tehran
+Iraq|Baghdad;Basra;Mosul;Erbil
+Syria|Damascus;Aleppo
+Lebanon|Beirut
+Jordan|Amman
+Israel|Tel Aviv;Haifa
+Egypt|Cairo;Giza
+Kenya|Nairobi;Mombasa;Kisumu
+Uganda|Kampala
+Ghana|Accra;Kumasi
+South Africa|Johannesburg;Cape Town;Durban;Pretoria
+Ethiopia|Addis Ababa
+Tanzania|Dar es Salaam;Dodoma
+Democratic Republic of the Congo|Kinshasa
+Morocco|Casablanca;Rabat;Marrakesh;Marrakech
+Algeria|Algiers
+Tunisia|Tunis
+Mexico|Mexico City;Ciudad de México;Guadalajara;Monterrey;Tijuana;Distrito Federal
+Brazil|São Paulo;Sao Paulo;Rio de Janeiro;Brasília;Brasilia;Fortaleza;Belo Horizonte;Recife;Porto Alegre;Curitiba;Santa Catarina
+Argentina|Buenos Aires;Córdoba Argentina;Rosario
+Colombia|Bogotá;Bogota;Medellín;Medellin;Cali;Barranquilla;Cartagena de Indias
+Ecuador|Quito;Guayaquil;Pichincha
+Venezuela|Caracas;Maracaibo
+Panama|Panama City
+Cuba|Havana;La Habana
+China|Beijing;Shanghai;Shenzhen;Guangzhou;Chengdu;Wuhan;Tianjin
+Japan|Tokyo;Osaka;Kyoto;Yokohama;Nagoya
+South Korea|Seoul;Busan;Incheon;South Jeolla
+North Korea|Pyongyang
+Malaysia|Kuala Lumpur;Penang
+Indonesia|Jakarta;Surabaya;Bali
+Thailand|Bangkok;Chiang Mai
+Philippines|Manila;Quezon City;Cebu
+Vietnam|Hanoi;Ho Chi Minh City;Saigon
+Afghanistan|Kabul;Kandahar;Helmand;Helmand Province
+Nepal|Kathmandu
+Sri Lanka|Colombo
+Australia|Sydney;Melbourne;Brisbane;Adelaide;New South Wales;Queensland
+New Zealand|Auckland;Wellington;Christchurch;Waikato
+Uganda|Entebbe
+Somalia|Mogadishu
+Sudan|Khartoum
+"""
+
+PLACE_SUFFIXES = ("state", "province", "region", "district", "governorate", "oblast", "prefecture",
+                  "county", "territory", "city")
+
+
+def _place_rows():
+    for line in _PLACES_RAW.strip().splitlines():
+        country, places = line.split("|", 1)
+        for p in places.split(";"):
+            if p.strip():
+                yield p.strip(), country.strip()
+
+
+PLACE_ROWS = list(_place_rows())

@@ -231,7 +231,9 @@ def parse_residence_note(text: str) -> list:
     """
     if not text or not (_YEAR.search(text) or _RESIDENCE_CUE.search(text)):
         return []
-    return sorted({c for c, _, _ in fallbacks.find_countries(text)})
+    found = {c for c, _, _ in fallbacks.find_countries(text)}
+    found |= set(normalize.find_place_countries(text))   # cities/regions: 'called Lagos home' -> Nigeria
+    return sorted(found)
 
 
 def looks_like_residence(text: str) -> bool:

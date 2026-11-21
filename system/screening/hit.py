@@ -17,7 +17,7 @@ from typing import Dict, List, Optional, Tuple
 
 from .models import COMPANY, INDIVIDUAL, Fact, HitProfile, PartialDate
 from .normalize import (
-    MONTHS, find_countries, parse_date, parse_date_list, search_query, split_list, to_countries,
+    MONTHS, find_countries, is_unresolved_place, parse_date, parse_date_list, search_query, split_list, to_countries, to_country,
 )
 
 # ---------------------------------------------------------------------------
@@ -216,16 +216,29 @@ def dated_reports(notes: str) -> List[PartialDate]:
 # Build the profile
 # ---------------------------------------------------------------------------
 
+_PLACE_FIELDS = ("countries", "nationality", "citizenship", "place_of_birth", "addresses")
+
+
 def hit_countries(hit_row) -> List[str]:
+    """Countries tied to the hit: countries, nationality, citizenship, place of birth, and each
+    address (its last part, or a known city/region in it, e.g. 'London')."""
     out = []
-    for key in ("countries", "nationality", "citizenship", "place_of_birth"):
-        for c in to_countries(hit_row.get(key)):
-            if c not in out:
+    for key in _PLACE_FIELDS:
+        for item in split_list(hit_row.get(key)):
+            c = to_country(item)
+            if c and c not in out:
                 out.append(c)
-    for addr in split_list(hit_row.get("addresses")):
-        for c in to_countries(addr.split(",")[-1]):
-            if c not in out:
-                out.append(c)
+    return out
+
+
+def hit_unresolved_places(hit_row) -> List[str]:
+    """Place values tied to the hit that name no country we can identify. While any exist,
+    'every country tied to the hit' is not known, so location cannot clear the hit."""
+    out = []
+    for key in _PLACE_FIELDS:
+        for item in split_list(hit_row.get(key)):
+            if is_unresolved_place(item) and item not in out:
+                out.append(item)
     return out
 
 
@@ -298,4 +311,5 @@ def build_hit(hit_row: dict, data=None) -> HitProfile:
         earliest_report=Fact(earliest, hid, "report") if earliest else None,
         death_date=Fact(death, hid, "deceased_date") if death else None,
         countries=[Fact(c, hid, "hit_country") for c in countries],
+        unresolved_places=hit_unresolved_places(hit_row),
     )

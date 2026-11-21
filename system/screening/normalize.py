@@ -8,7 +8,7 @@ import re
 import unicodedata
 from typing import Iterable, List, Optional, Sequence
 
-from .countries import NOT_COUNTRIES, ROWS
+from .countries import NOT_COUNTRIES, PLACE_ROWS, PLACE_SUFFIXES, ROWS
 from .models import PartialDate
 
 # ---------------------------------------------------------------------------
@@ -191,28 +191,99 @@ for _canon, _iso2, _iso3, _aliases, _demonyms in ROWS:
 CANONICAL_COUNTRIES = sorted({r[0] for r in ROWS})
 
 
-def to_country(s) -> Optional[str]:
+_PREFIXES = ("islamic republic of ", "federal republic of ", "people's republic of ", "united republic of ",
+             "democratic republic of the ", "republic of the ", "republic of ", "kingdom of the ",
+             "kingdom of ", "state of ", "commonwealth of ", "principality of ", "grand duchy of ")
+_INVERTED_TAILS = {p.strip() for p in _PREFIXES} | {"the"}
+_PLACEHOLDERS = {re.sub(r"[^a-z]", "", k) for k in NOT_COUNTRIES} | {"tbd", "tba", "xxx", "xx", "test", "null"}
+_PLACES = {}
+for _p, _c in PLACE_ROWS:
+    _PLACES.setdefault(_ckey(_p), _c)
+
+
+def _country_key(key: str) -> Optional[str]:
+    if key in _BY_NAME:
+        return _BY_NAME[key]
+    for pre in _PREFIXES:                      # "Kingdom of Saudi Arabia" -> "saudi arabia"
+        if key.startswith(pre) and key[len(pre):] in _BY_NAME:
+            return _BY_NAME[key[len(pre):]]
+    return None
+
+
+def _place_key(key: str) -> Optional[str]:
+    if key in _PLACES:
+        return _PLACES[key]
+    for suf in PLACE_SUFFIXES:                 # "Lagos State" -> "lagos"
+        if key.endswith(" " + suf) and key[:-len(suf) - 1] in _PLACES:
+            return _PLACES[key[:-len(suf) - 1]]
+    return None
+
+
+def _parts(s) -> List[str]:
+    text = re.sub(r"\[[^\]]*\]|\([^)]*\)", " ", str(s))
+    return [p.strip() for p in text.split(",") if p.strip()]
+
+
+def _to_country(s) -> Optional[str]:
     """Canonical country for one field value, or None.
 
-    Handles names, ISO2/ISO3 codes, demonyms ('Nigerian'), tags ('Spain [Residency]')
-    and full places ('Jaén, Jaén, Spain' -> last part). 'International'/'Europe' -> None.
+    Tries, in order:
+      1. the last comma part as a country name, alias, demonym or ISO2/ISO3 code
+         ('Spain [Residency]', 'Jaén, Jaén, Spain', 'GB', 'Nigerian'), also with a formal
+         prefix removed ('Kingdom of Saudi Arabia');
+      2. the inverted form 'Korea, Republic of';
+      3. a known city or region in any part, right to left ('London', 'Lagos State').
+    'International' / 'Europe' -> None. A place none of these knows -> None (see
+    is_unresolved_place: callers must then treat location as unknown, never as a mismatch).
     """
     if s is None:
         return None
-    text = re.sub(r"\[[^\]]*\]|\([^)]*\)", " ", str(s))
-    parts = [p.strip() for p in text.split(",") if p.strip()]
+    parts = _parts(s)
     if not parts:
         return None
-    last = parts[-1]
-    key = _ckey(last)
+    key = _ckey(parts[-1])
     if not key or key in NOT_COUNTRIES:
         return None
-    if key in _BY_NAME:
-        return _BY_NAME[key]
-    raw = re.sub(r"[^A-Za-z]", "", last)
+    c = _country_key(key)
+    if c:
+        return c
+    raw = re.sub(r"[^A-Za-z]", "", parts[-1])
     if len(raw) in (2, 3) and raw.lower() in _BY_CODE and raw.lower() not in NOT_COUNTRIES:
         return _BY_CODE[raw.lower()]
+    if len(parts) >= 2 and key in _INVERTED_TAILS:
+        c = _country_key(_ckey(key + " " + parts[-2])) or _country_key(_ckey(parts[-2]))
+        if c:
+            return c
+    for part in reversed(parts):
+        c = _place_key(_ckey(part))
+        if c:
+            return c
     return None
+
+
+def to_country(s) -> Optional[str]:  # noqa: F811  (wraps the lookup above with one US-state fix)
+    c = _to_country(s)
+    if c == "Georgia" and s is not None:
+        # 'Atlanta, Georgia' is the US state, not the country, when another part is a US place.
+        parts = _parts(s)
+        if any(_place_key(_ckey(p)) == "United States" for p in parts[:-1]):
+            return "United States"
+    return c
+
+
+def is_unresolved_place(s) -> bool:
+    """True for a non-empty place value that names no country we can identify
+    ('Smallville', 'Lagos' before the city table knew it). Not for empty values or for
+    'International' / 'Europe', which are not countries at all (POLICY.md principle 5)."""
+    if s is None:
+        return False
+    parts = _parts(s)
+    if not parts:
+        return False
+    key = _ckey(parts[-1])
+    if not key or key in NOT_COUNTRIES or re.sub(r"[^a-z]", "", key) in _PLACEHOLDERS:
+        return False                     # 'N/A', 'n.a.', 'unknown', '-' are not places
+    return to_country(s) is None
 
 
 def to_countries(value) -> List[str]:
@@ -250,6 +321,34 @@ _TEXT_RE = re.compile(
 _UPPER_RE = re.compile(
     r"(?<![A-Za-z])(" + "|".join(re.escape(k) for k in sorted(_TEXT_UPPER, key=len, reverse=True)) + r")(?![A-Za-z])"
 )
+
+
+_PLACE_TEXT = {}
+for _p, _c in PLACE_ROWS:
+    _PLACE_TEXT.setdefault(fold(_p), _c)
+_PLACE_RE = re.compile(
+    r"(?<![A-Za-z])(" + "|".join(re.escape(k) for k in sorted(_PLACE_TEXT, key=len, reverse=True)) +
+    r")(?:\s+(?:" + "|".join(s.capitalize() for s in PLACE_SUFFIXES) + r"))?(?![A-Za-z])"
+)
+
+
+def find_place_countries(text: str, ignore_names: Sequence[str] = ()) -> List[str]:
+    """Countries of known cities and regions named in free text ('called Lagos home' -> Nigeria).
+
+    Case-sensitive on purpose: place names are written capitalised, so ordinary words never
+    match. Kept separate from find_countries so search-snippet reading is unchanged."""
+    if not text:
+        return []
+    t = fold(text)
+    for nm in ignore_names or ():
+        if nm:
+            t = t.replace(fold(nm), " ")
+    out = []
+    for m in _PLACE_RE.finditer(t):
+        c = _PLACE_TEXT[m.group(1)]
+        if c not in out:
+            out.append(c)
+    return out
 
 
 def _text_key(text: str) -> str:

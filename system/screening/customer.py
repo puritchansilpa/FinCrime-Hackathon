@@ -320,6 +320,7 @@ def verified_checks(records, data) -> list:
                 "name": c.get("verified_name") or None,
                 "dob": parse_date(c.get("verified_dob")),
                 "doc_country": to_country(c.get("document_country")),
+                "doc_country_raw": c.get("document_country"),
             })
         for note in _notes_for(rec, data):
             p = _parsed_kyc_note(note)
@@ -349,6 +350,7 @@ def _person_from_records(records, data) -> Person:
     """
     records = sorted(records, key=lambda r: r["record_id"])
     declared_names, declared_dobs, countries = [], [], []
+    unresolved = []   # places we could not tie to a country: location then cannot clear (HANDOFF P1)
     for r in records:
         rid = r["record_id"]
         for f in NAME_FIELDS:
@@ -361,6 +363,8 @@ def _person_from_records(records, data) -> Person:
             c = to_country(r.get(f))
             if c:
                 countries.append(Fact(c, rid, f))
+            elif normalize.is_unresolved_place(r.get(f)):
+                unresolved.append(f"{r.get(f)} ({rid})")
 
     checks = verified_checks(records, data)
 
@@ -373,6 +377,8 @@ def _person_from_records(records, data) -> Person:
     verified_name, verified_dob, doc_country = newest("name"), newest("dob"), newest("doc_country")
     if doc_country:
         countries.append(Fact(doc_country.value, doc_country.source_id, "document_country"))
+    if checks and not checks[0]["doc_country"] and normalize.is_unresolved_place(checks[0].get("doc_country_raw")):
+        unresolved.append(f"{checks[0]['doc_country_raw']} ({checks[0]['source_id']})")
 
     for r in records:
         for note in _notes_for(r, data):
@@ -384,6 +390,9 @@ def _person_from_records(records, data) -> Person:
                 found = llm.extract_residence_countries(text)
             for c in found:
                 countries.append(Fact(c, note["note_id"], "residence_note"))
+            if not found and notes_parse.looks_like_residence(text):
+                # The note says where they lived, but names no place we can tie to a country.
+                unresolved.append(f"the place named in {note['note_id']}")
 
     # drop exact repeats (e.g. the same residence note read twice), keep order stable
     seen, unique = set(), []
@@ -401,6 +410,7 @@ def _person_from_records(records, data) -> Person:
         declared_names=declared_names,
         declared_dobs=declared_dobs,
         countries=unique,
+        unresolved_places=sorted(set(unresolved)),
     )
 
 

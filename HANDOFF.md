@@ -32,7 +32,7 @@ The two meet at one point only: the `unresolved_places` field (see "Contract").
 1. Merge `llm-harness` (the xAI conversion, verified to give identical output) into `main`, and push.
 2. Both people start their branches from that `main`.
 
-## Contract change (Ben makes it first, in a small PR to `main`)
+## Contract change ✅ done (Ben, branch `fix-failopen`)
 
 In `system/screening/models.py`, add to **both** `Person` and `HitProfile`:
 ```python
@@ -53,15 +53,21 @@ unresolved_places: List[str] = field(default_factory=list)   # country-ish value
 
 | # | Task | Done when |
 |---|---|---|
-| B1 | **Places the system can't map.** Fill `HitProfile.unresolved_places` with every hit country value `to_country` can't map. Add the policy rule above. | A hit with `addresses: ["London", "Karachi, Pakistan"]` against a UK-only customer is **not** cleared |
-| B2 | **City and region lookup in `normalize.to_country`.** Major cities and regions (London, Lagos, Karachi, Dubai, Mumbai, Toronto, …) map to their country. Also strip prefixes ("Kingdom of", "Islamic Republic of", "Republic of", "State of") and handle the inverted form ("Korea, Republic of"). | `to_country("London") == "United Kingdom"`, `to_country("Kingdom of Saudi Arabia") == "Saudi Arabia"`. **Poom's customer side gets this automatically**, because `customer.to_country` calls `normalize.to_country` first |
+| B1 ✅ | **Places the system can't map.** Fill `HitProfile.unresolved_places` with every hit country value `to_country` can't map. Add the policy rule above. | A hit with `addresses: ["London", "Karachi, Pakistan"]` against a UK-only customer is **not** cleared |
+| B2 ✅ | **City and region lookup in `normalize.to_country`.** Major cities and regions (London, Lagos, Karachi, Dubai, Mumbai, Toronto, …) map to their country. Also strip prefixes ("Kingdom of", "Islamic Republic of", "Republic of", "State of") and handle the inverted form ("Korea, Republic of"). | `to_country("London") == "United Kingdom"`, `to_country("Kingdom of Saudi Arabia") == "Saudi Arabia"`. **Poom's customer side gets this automatically**, because `customer.to_country` calls `normalize.to_country` first |
 | B3 | **Non-age numbers in search snippets.** In `snippet_age`, prefer explicit age wording ("aged 45", "33-year-old", ", 45,") and use the structural fallback only when none is found. Ignore numbers followed by units (thousand, million, %, percent, years in prison or sentence, people, votes, times) or preceded by a currency (USD, $, €, £, PKR, NGN, EUR). | "…was fined 50 thousand" gives **no** age. All 16,882 dev snippets still give the same age as today |
 | B4 | **Category spellings.** `listing_category` matches on keywords: sanction → Sanctions; pep or politically exposed → PEP; enforcement → Enforcement; adverse or media → Adverse Media; soe or state-owned/state owned → SOE; anything else → "named on a watchlist". | `Politically Exposed Person`, `Sanction`, `Adverse-Media` and `State Owned Enterprise` each get the right listing phrase |
 | B5 | **Birth dates stated directly in profile notes:** "born in 1974", "(born 3 May 1974)", "turned 45 in March 2019", "45 years of age". These become hit DOB candidates. | The probe sentences give the right birth year(s) |
 | B6 | **More date formats in `parse_date`:** `03-May-1974` and `May-1974`. `c. 1974` and `1974 (approx.)` stay **unknown** on purpose, because an approximate year must never contradict. | Unit tests |
 | B7 | **Search-results lookup that tolerates other query formats.** `hit.py` builds its own index keyed by `search_query(row["query"])`, so capitals or unsorted words in the unseen set still match. | The same 62 dev hits find search results as today |
 
-**Order:** contract and B1 first (the PR Poom is waiting on), then B2, B3, B4, B5–B7.
+**Order:** contract, B1, B2, P1 and P2 are ✅ done on `fix-failopen`. Next: B3, B4, then B5–B7.
+
+**Moved to Ben (all place handling in one person's hands):** P1 and P2 below are done by Ben, in Poom's files. The changes are small and self-contained:
+- **`customer.py`, `_person_from_records`:** collects `unresolved_places` from unmapped record countries, the newest check's unmapped document country (a new `doc_country_raw` key in `verified_checks`), and residence notes that read as residence but name no known place.
+- **`notes_parse.parse_residence_note`:** also adds `normalize.find_place_countries(text)`, so cities and regions count.
+
+Tests are in `tests/test_places.py`. Dev output is unchanged, byte-identical, because dev has no unmapped places.
 
 ---
 
@@ -71,8 +77,8 @@ unresolved_places: List[str] = field(default_factory=list)   # country-ish value
 
 | # | Task | Done when |
 |---|---|---|
-| P1 | **Places the system can't map, customer side** (needs the contract PR). Fill `Person.unresolved_places` with every residence, nationality, document-country or residence-note place that can't be mapped. | A customer whose record says `residence_country: "Lagos"` has it listed as unresolved, or mapped once B2 lands |
-| P2 | **The "called Lagos home" case in residence notes.** Switch `notes_parse` from `fallbacks.find_countries` to `normalize.find_countries`, which becomes city-aware with B2, or make `fallbacks` call it. When a residence note names a place that maps to no country, add the place to `unresolved_places`. | "The customer previously called Lagos home, from 2012 until 2019" gives Nigeria (after B2), never just an empty list |
+| P1 ✅ (Ben) | **Places the system can't map, customer side** (needs the contract PR). Fill `Person.unresolved_places` with every residence, nationality, document-country or residence-note place that can't be mapped. | A customer whose record says `residence_country: "Lagos"` has it listed as unresolved, or mapped once B2 lands |
+| P2 ✅ (Ben) | **The "called Lagos home" case in residence notes.** Switch `notes_parse` from `fallbacks.find_countries` to `normalize.find_countries`, which becomes city-aware with B2, or make `fallbacks` call it. When a residence note names a place that maps to no country, add the place to `unresolved_places`. | "The customer previously called Lagos home, from 2012 until 2019" gives Nigeria (after B2), never just an empty list |
 | P3 | **Template learner** (`templates.py`; agreed design below). | Passes the **go/no-go** and the bench criteria |
 | P4 | **Test bench cases** in `tests/bench/notes.jsonl`, in the agreed format below. At least 100 reworded KYC and residence notes, including: name in normal case with no cue word, DOB with no birth cue, a city but no country, rejected/expired/pending wording, two dates in either order, and a non-English-style date order. | The file exists, and every case has its `expected` facts filled in by hand |
 | P5 | **Bench runner** (`tools/bench.py`). Runs the bench through (a) regex only, (b) regex + template learner, (c) regex + learner + LLM. Scores each fact as right, wrong or unknown, and runs (c) 5 times to check stability. | Prints a table per mode: fields right, wrong and unknown, plus whether the 5 runs were identical |
@@ -110,8 +116,8 @@ Ben will add about 20 held-out cases that Poom hasn't seen, so the learner isn't
 
 ## Sync points
 1. **Step 0 (Ben):** `llm-harness` goes into `main`.
-2. **Contract PR (Ben):** `unresolved_places` and the policy rule go into `main`. Poom starts P1 and P2 after this; P3–P5 can start straight away.
-3. **B2 lands (Ben):** Poom's P2 test for the Lagos case passes.
+2. ✅ **Contract, B1, B2, P1, P2 (Ben):** `fix-failopen` goes into `main`. Poom works only on P3–P5 (template learner, bench cases, bench runner). When P3 hooks into `notes_parse`, pull `main` first: `parse_residence_note` changed.
+3. **B3–B7 (Ben)** continue on a new branch.
 4. **Both branches merged** through the gate.
 5. **Bench results (both):** decide whether the LLM goes on by default.
 
