@@ -65,7 +65,9 @@ def main(argv=None) -> int:
             if not ev_ok:
                 print(f"   evidence not among our facts: {sorted(need - sources)}")
             print(f"   our path:   {' -> '.join(r.path) if r else '-'}")
-            print(f"   label path: {lab.get('path', '')[:400]}")
+            lpath = lab.get("path") or ""
+            lpath = " -> ".join(lpath) if isinstance(lpath, list) else lpath
+            print(f"   label path: {lpath[:400]}")
     n = len(data.practice_labels)
     print(f"\nLabelled alerts resolved to the right person(s): {n - wrong}/{n}")
     print(f"Labels whose KYC/NOTE evidence is among our facts: {n - ev_missing}/{n}")

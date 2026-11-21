@@ -1,7 +1,9 @@
 """[Workstream A] Load the data folder's JSON Lines files and build lookup indexes.
 
-Robust to the shape differences we expect between our rebuilt dev/ files and the
-data room's real files:
+Reads the official data room format (screening/dev/) and stays robust to other shapes,
+including our earlier rebuilt dev/ files:
+  - the screened customer may be nested ("customer": {...}) or flat; it ends up flat;
+  - name_variants.json may use "groups" (official) or "name_variants";
   - list fields may be JSON arrays or "; "-joined strings (both become lists);
   - hits may be in hits.jsonl, embedded in alerts ("hits": [...]), or both;
   - any file may be missing (it loads as empty, with a warning on stderr).
@@ -105,6 +107,42 @@ def _load_rows(folder: str, name: str) -> list:
     return rows
 
 
+# The screened customer on an alert. The official files nest it as
+# {"customer": {"name", "entity_type", "dob", "country", "city"}}; our rebuilt files had
+# it flat as customer_name, entity_type, dob, country, city. Both end up flat.
+SCREENED_FIELDS = {"name": "customer_name", "customer_name": "customer_name", "full_name": "customer_name",
+                   "entity_type": "entity_type", "type": "entity_type", "dob": "dob",
+                   "date_of_birth": "dob", "country": "country", "city": "city"}
+
+
+def _flatten_screened(alert: dict) -> None:
+    screened = alert.get("customer")
+    if not isinstance(screened, dict):
+        return
+    for src, dst in SCREENED_FIELDS.items():
+        if src in screened and alert.get(dst) in (None, ""):
+            alert[dst] = screened[src]
+
+
+def normalise_variants(loaded) -> dict:
+    """name_variants.json in any shape -> {"name_variants": [[...]], "company_legal_forms": [...]}.
+
+    The official file is {"description", "groups": [[...]], "company_legal_forms": [...]};
+    our rebuilt one used "name_variants"; a bare list of groups is accepted too.
+    The original keys are kept alongside.
+    """
+    if isinstance(loaded, list):
+        return {"name_variants": loaded, "groups": loaded, "company_legal_forms": []}
+    if not isinstance(loaded, dict):
+        return {"name_variants": [], "groups": [], "company_legal_forms": []}
+    out = dict(loaded)
+    groups = loaded.get("groups") or loaded.get("name_variants") or loaded.get("variants") or []
+    out["name_variants"] = groups
+    out["groups"] = groups
+    out["company_legal_forms"] = loaded.get("company_legal_forms") or loaded.get("legal_forms") or []
+    return out
+
+
 def _index(rows, key_fn, sort_key) -> dict:
     idx = defaultdict(list)
     for row in rows:
@@ -184,6 +222,7 @@ def load_data(folder: str) -> Data:
     alerts = {a["alert_id"]: a for a in raw["alerts"] if a.get("alert_id")}
     for a in alerts.values():
         a["hit_ids"] = as_list(a.get("hit_ids"))
+        _flatten_screened(a)
     for h in d.hits.values():
         a = alerts.get(h.get("alert_id"))
         if a is not None and h["hit_id"] not in a["hit_ids"]:
@@ -251,7 +290,6 @@ def load_data(folder: str) -> Data:
     if os.path.exists(variants):
         with open(variants, encoding="utf-8-sig") as fh:
             loaded = json.load(fh)
-        # Accept either {"name_variants": [...], ...} or a bare list of variant groups.
-        d.name_variants = loaded if isinstance(loaded, dict) else {"name_variants": loaded}
+        d.name_variants = normalise_variants(loaded)
     fallbacks.configure(d.name_variants)
     return d

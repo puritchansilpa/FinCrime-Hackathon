@@ -64,7 +64,7 @@ class LoadTests(unittest.TestCase):
         self.assertEqual([n["note_id"] for n in d.notes_by_email["ana.silva@x.example"]], ["NOTE-1"])
         self.assertEqual([r["result_id"] for r in d.search_by_query["ana silva"]], ["SR-1"])
         self.assertEqual(d.accounts_by_login["anas2"][0]["customer_id"], "CUS-1")
-        self.assertEqual(d.name_variants, {"name_variants": [["muhammad", "mohammed"]]})
+        self.assertEqual(d.name_variants["name_variants"], [["muhammad", "mohammed"]])
         self.assertTrue(d.policy_text.startswith("# Policy"))
 
     def test_missing_files_load_empty(self):
@@ -72,6 +72,54 @@ class LoadTests(unittest.TestCase):
             d = load_data(empty)
         self.assertEqual(d.alerts, [])
         self.assertEqual(d.hits, {})
+
+
+class OfficialFormatTests(unittest.TestCase):
+    """The data room's own shapes: nested screened customer, arrays, "groups" variants."""
+
+    def test_nested_customer_arrays_and_groups(self):
+        import json
+        from screening import fallbacks
+        from screening.customer import resolve
+        with tempfile.TemporaryDirectory() as tmp:
+            rows = {
+                "alerts": [{"alert_id": "A-000001", "screened_at": "2026-11-01",
+                            "customer": {"name": "Mohamed Nadeem", "entity_type": "Individual",
+                                         "dob": "1990", "country": "Pakistan", "city": None},
+                            "account_ref": None, "login_handle": None, "email": None,
+                            "hit_ids": ["H-000001"]}],
+                "hits": [{"hit_id": "H-000001", "alert_id": "A-000001", "name": "Nadeem, Muhammad",
+                          "aliases": [], "dobs": ["1990"], "details": {"pep": "x"}, "countries": []}],
+                "customers": [{"record_id": "CUS-000001", "entity_type": "Individual",
+                               "full_name": "Mohammad Nadeem", "dob": "April 5, 1990",
+                               "nationality": "Pakistani", "residence_country": "PK",
+                               "email": "m@x.example", "phone": "+92 1"}],
+                "practice_labels": [{"hit_id": "H-000001", "decision": "REVIEW",
+                                     "reason_codes": ["INSUFFICIENT_DATA"],
+                                     "customer_record_ids": ["CUS-000001"], "evidence": [],
+                                     "path": ["a", "b"]}],
+            }
+            for name, rs in rows.items():
+                with open(os.path.join(tmp, name + ".jsonl"), "w", encoding="utf-8") as fh:
+                    fh.writelines(json.dumps(r) + "\n" for r in rs)
+            with open(os.path.join(tmp, "name_variants.json"), "w", encoding="utf-8") as fh:
+                json.dump({"description": "x", "groups": [["muhammad", "mohamed", "mohammad"]],
+                           "company_legal_forms": ["gmbh"]}, fh)
+            import contextlib
+            import io
+            with contextlib.redirect_stderr(io.StringIO()):
+                d = load_data(tmp)
+        alert = d.alerts[0]
+        self.assertEqual((alert["customer_name"], alert["entity_type"], alert["dob"], alert["country"]),
+                         ("Mohamed Nadeem", "Individual", "1990", "Pakistan"))
+        self.assertEqual(d.name_variants["name_variants"], [["muhammad", "mohamed", "mohammad"]])
+        self.assertTrue(fallbacks.names_agree("Mohamed Nadeem", "Mohammad Nadeem"))
+        self.assertEqual(d.hits["H-000001"]["dobs"], ["1990"])
+        self.assertEqual(d.hits["H-000001"]["details"], {"pep": "x"})   # dicts are left alone
+        self.assertEqual(d.practice_labels[0]["reason_codes"], ["INSUFFICIENT_DATA"])
+        # the search finds the customer only because the variant groups were read
+        res = resolve(alert, d)
+        self.assertEqual([p.record_ids for p in res.persons], [["CUS-000001"]])
 
 
 if __name__ == "__main__":

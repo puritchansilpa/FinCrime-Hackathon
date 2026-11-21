@@ -138,7 +138,11 @@ def score(preds: dict, labels: list) -> dict:
             code_ok = pred.get("reason_code") in label_codes
             label_ids = set(as_list(lab.get("customer_record_ids")))
             cid = pred.get("customer_record_id")
-            cust_ok = (cid in label_ids) if label_ids else cid is None
+            # as the official validate.py: an AMBIGUOUS label also accepts null
+            if label_ids == {"AMBIGUOUS"}:
+                cust_ok = cid in (None, "", "AMBIGUOUS")
+            else:
+                cust_ok = (cid in label_ids) if label_ids else cid is None
             label_ev = set(as_list(lab.get("evidence")))
             our_ev = set(as_list(pred.get("evidence")))
             ev_ok = our_ev == label_ev
@@ -250,7 +254,8 @@ def report(res: dict, problems: list, show_all: bool, quiet: bool) -> None:
         if pred.get("reason"):
             print(f"   our reason: {pred['reason']}", file=out)
         if lab.get("path"):
-            print(f"   path: {lab['path']}", file=out)
+            path = lab["path"]
+            print(f"   path: {' → '.join(path) if isinstance(path, list) else path}", file=out)
 
 
 def main(argv=None) -> int:

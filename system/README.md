@@ -9,6 +9,9 @@ resolved customer record, and a short reason in plain English.
 system/run <data folder> <output file> [--llm]
 ```
 
+For the development set: `system/run screening/dev output/dev.jsonl` (the official data
+room lives in `screening/`, which is git-ignored).
+
 - Python 3 standard library only. No packages to install.
 - Reads only the given folder and writes one JSON line per hit, sorted by `hit_id`.
 - The LLM is **off** unless you pass `--llm` and set `OPENROUTER_API_KEY`.
@@ -29,7 +32,7 @@ alerts ─► load ─► resolve(alert) ─────────────
 
 | Module | Owner | Job |
 |---|---|---|
-| `load.py` | A | Reads the JSON Lines files (list fields as arrays or `; `-joined strings, hits on their own or inside alerts, missing files allowed) and builds every lookup index. |
+| `load.py` | A | Reads the JSON Lines files in the official format (screened customer nested under `customer`, arrays, `groups` in `name_variants.json`), also accepts flat or `; `-joined variants and hits inside alerts, allows missing files, and builds every lookup index. |
 | `customer.py` | A | Alert → customer records → persons → `Person` with sourced facts. |
 | `notes_parse.py` | A | Reads identity checks and residence history out of free-text notes. |
 | `fallbacks.py` | A | A's stand-ins for dates, countries and name matching, written to the SOP; used only where B's functions return nothing. |
@@ -98,7 +101,7 @@ not use templates. It finds each fact by what it looks like:
 | Document country | The one country named outside the person's name. Two different countries means unknown. |
 | Result | Approved on success words; rejected or expired on failure words; otherwise unknown, which is not evidence. |
 
-On dev it reads all 22,575 kyc notes (`tools/check_notes.py dev`). Tests cover
+On dev it reads all 22,575 kyc notes (`tools/check_notes.py screening/dev`). Tests cover
 paraphrases that are not in dev, including rejected and expired checks.
 
 **4. Countries tied to the customer** (principle 6, location)
@@ -108,7 +111,7 @@ country, and every country a support note says they lived or worked in ("worked 
 lived in Pakistan from 2013 to 2015"). More countries only make a location clearance
 less likely, so the residence reader leans towards including a country.
 
-**Results on dev** (`tools/check_resolution.py dev`):
+**Results on dev** (`tools/check_resolution.py screening/dev`):
 
 - 50/50 labelled alerts resolve to exactly the person(s) the label names, including
   the two `AMBIGUOUS` alerts.
@@ -143,7 +146,7 @@ missing month is never treated as a mismatch.
 - With `--llm`: temperature 0, a fixed seed, a pinned model and provider with fallbacks
   off, a JSON schema, and a cache so the same note always gives the same answer. An LLM
   failure means "unknown", which can only push a hit towards `REVIEW`.
-- `tools/check_runs.py dev --runs 5` runs the system five times in separate processes and
+- `tools/check_runs.py screening/dev --runs 5` runs the system five times in separate processes and
   compares the outputs byte for byte. On dev, all five are identical.
 
 ## Model and prompts (only with `--llm`)
@@ -178,10 +181,11 @@ else is dropped as unknown. On dev the regex reads every note, so the LLM is not
 | Command | What it checks |
 |---|---|
 | `python3 -m unittest discover tests` | Unit tests (no network) |
-| `python3 tools/score.py output/dev.jsonl dev/practice_labels.jsonl --data dev` | The brief's cost matrix, unsafe clearances, reason checks, per-hit diff with the label path |
-| `python3 tools/check_resolution.py dev` | Customer resolution against the labels, plus an audit of every alert |
-| `python3 tools/check_notes.py dev` | How much of every note the parsers can read |
-| `python3 tools/check_runs.py dev --runs 5` | Byte-identical output across runs, and timing |
+| `python3 screening/validate.py --data screening/dev --output output/dev.jsonl --score screening/dev/practice_labels.jsonl` | The official format check and practice score |
+| `python3 tools/score.py output/dev.jsonl screening/dev/practice_labels.jsonl --data screening/dev` | The brief's cost matrix, unsafe clearances, reason checks, per-hit diff with the label path |
+| `python3 tools/check_resolution.py screening/dev` | Customer resolution against the labels, plus an audit of every alert |
+| `python3 tools/check_notes.py screening/dev` | How much of every note the parsers can read |
+| `python3 tools/check_runs.py screening/dev --runs 5` | Byte-identical output across runs, and timing |
 
 ## Hit facts, decision rules and worked cases (Workstream B)
 

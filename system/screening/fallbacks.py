@@ -274,7 +274,8 @@ _config = {"groups": {}, "legal_forms": frozenset()}
 def configure(name_variants: dict) -> None:
     """Load name_variants.json: variant groups and company legal forms."""
     groups, members = {}, {}
-    for i, group in enumerate((name_variants or {}).get("name_variants") or []):
+    nv = name_variants or {}
+    for i, group in enumerate(nv.get("groups") or nv.get("name_variants") or []):
         folded = {_fold(v) for v in group if v}
         for v in folded:
             groups.setdefault(v, set()).add(i)

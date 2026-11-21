@@ -14,3 +14,7 @@
 .idea/
 __pycache__/
 *.pyc
+
+# Official data room (dev data, workbook, validator): participants only, never commit.
+# Run with: system/run screening/dev output/dev.jsonl
+/screening/
