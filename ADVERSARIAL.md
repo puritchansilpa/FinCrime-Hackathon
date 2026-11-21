@@ -54,6 +54,12 @@ Decisions: 66 `SAME_ENTITY`, 24 `REVIEW`, 18 `DIFFERENT_ENTITY`.
 
 The second batch (ADV-H-59 through ADV-H-108) varies the seven misses: phone punctuation, trunk `0`, `00` prefix and extensions; document dashes, spaces, case and leading zeros; approved notes that mention an old or expired document; "raised in", "national of", "grew up in", "moved from", "originally from"; "born on", "b.", "DOB:" and "aged 45 in 2019"; listing phrases only in the search title; death dates only in the profile. Alongside those are controls a sloppy fix would get wrong: same phone or document with a different date of birth, a near-miss number, a rejected check, a relative's country or death, an age that belongs to the father, a namesake title, and a death on or after the screening date.
 
+## After the fixes on this branch
+
+`python3 adversarial/run.py` is 108/108, with 0 wrong `DIFFERENT_ENTITY`. Practice labels stay 50/50 with 0 unsafe clearances. Against `7ddca7b`, 16 dev decisions changed: 10 `REVIEW` to `DIFFERENT_ENTITY` and 6 `REVIEW` to `SAME_ENTITY`, each from an explicit "was born" sentence about the listed person. Four more hits stayed `DIFFERENT_ENTITY` and only changed reason code, to `DOB_MISMATCH`.
+
+The numbers below are `main` at `7ddca7b`, before those fixes.
+
 ## What main does
 
 `python3 adversarial/run.py` on `7ddca7b`:
