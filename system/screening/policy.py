@@ -150,14 +150,17 @@ def assess_name(cv: CustomerView, hp: HitProfile, variants: Optional[Variants]) 
     company = cv.entity_type == COMPANY
     usable = [f for f in cv.name_facts if f.value and
               len(real_parts(f.value, company, variants)) >= (1 if company else 2)]
-    if not usable or not hp.names:
+    # A hit name made only of placeholders ('N/A', 'UNKNOWN') is no name at all: it can
+    # neither agree nor contradict (ADV-H-110).
+    hit_names = [hf for hf in hp.names if hf.value and real_parts(hf.value, company, variants)]
+    if not usable or not hit_names:
         return NameResult(UNKNOWN)
     for cf in usable:
-        for hf in hp.names:
+        for hf in hit_names:
             if names_agree(cf.value, hf.value, variants, company):
                 return NameResult(AGREE, cf, hf)
     if cv.verified_name is not None and cv.verified_name in usable:
-        return NameResult(CONTRADICT, cv.verified_name, hp.names[0])
+        return NameResult(CONTRADICT, cv.verified_name, hit_names[0])
     return NameResult(NEITHER)          # declared names only: no agreement, but no contradiction
 
 

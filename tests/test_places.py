@@ -146,3 +146,38 @@ class TestCustomerSide(unittest.TestCase):         # P1, P2
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestFailOpenFixesFromIntegration(unittest.TestCase):
+    """Found in the P3-P5 / adversarial integration trial: each would have cleared a hit
+    on a fact that is not about the listed person."""
+
+    def test_birth_date_must_follow_the_cue(self):
+        from screening.hit import explicit_birth_dates
+        self.assertEqual(explicit_birth_dates("Born in Kano, he was arrested in March 2019 for fraud."), [])
+        self.assertEqual(explicit_birth_dates("Musa Bello, born in Kano, was sentenced in 2016."), [])
+        self.assertEqual([d.iso() for d in explicit_birth_dates("Musa Bello was born on 3 May 1974.")], ["1974-05-03"])
+        self.assertEqual([d.iso() for d in explicit_birth_dates("Musa Bello (b. 1974) was charged in 2019.")], ["1974"])
+        self.assertEqual([d.iso() for d in explicit_birth_dates("DOB: 03/05/1974.")], ["1974-05-03"])
+
+    def test_death_must_be_the_listed_persons(self):
+        from screening.hit import death_from_notes
+        parts = ["musa", "bello"]
+        for text in ("The co-defendant, John Smith, died on 3 May 2019 before trial.",
+                     "A witness in the case died on 12 June 2018.",
+                     "Bello's co-defendant died on 3 May 2019.",
+                     "His father died on 3 May 2019."):
+            self.assertIsNone(death_from_notes(text, parts), text)
+        self.assertEqual(death_from_notes("Musa Bello died on 3 May 2019.", parts).iso(), "2019-05-03")
+        self.assertEqual(death_from_notes("Date of death: 3 May 2019.", parts).iso(), "2019-05-03")
+
+    def test_placeholder_hit_name_is_not_a_name_mismatch(self):
+        p = Person(["CUS-1"], INDIVIDUAL, verified_name=Fact("Juan Perez", "KYC-1"),
+                   countries=[Fact("Spain", "CUS-1")])
+        d = decide(p, build_hit(hit_row(name="N/A", countries=["Spain"]), {}), ALERT, Variants())
+        self.assertEqual(d.decision, REVIEW)
+
+    def test_impossible_date_is_unknown_in_the_fallback_parser(self):
+        from screening import fallbacks
+        self.assertIsNone(fallbacks.parse_date("31/02/1980"))
+        self.assertIsNotNone(fallbacks.parse_date("29/02/2000"))

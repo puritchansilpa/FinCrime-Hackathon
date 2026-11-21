@@ -6,6 +6,7 @@ fallbacks: customer.py always calls B's function first and only uses these when 
 returns nothing. Once B ships B1/B2, B can adopt or replace any of this; then this
 module can be deleted.
 """
+import calendar
 import re
 import unicodedata
 from functools import lru_cache
@@ -28,6 +29,8 @@ def _mk(y, mo=None, d=None):
         return None
     if d is not None and not 1 <= d <= 31:
         return None
+    if d is not None and (mo is None or d > calendar.monthrange(y, mo)[1]):
+        return None      # 31 February is not a date: unknown, never a mismatch (ADV-H-117)
     return PartialDate(y, mo, d)
 
 

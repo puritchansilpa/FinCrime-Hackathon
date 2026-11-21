@@ -17,7 +17,7 @@ from typing import Dict, List, Optional, Tuple
 
 from .models import COMPANY, INDIVIDUAL, Fact, HitProfile, PartialDate
 from .normalize import (
-    MONTHS, find_countries, is_unresolved_place, parse_date, parse_date_list, search_query, split_list, to_countries, to_country,
+    MONTHS, find_countries, fold, is_unresolved_place, name_parts, parse_date, parse_date_list, search_query, split_list, to_countries, to_country,
 )
 
 # ---------------------------------------------------------------------------
@@ -124,17 +124,41 @@ _TEXT_DATE_PATTERNS = [
 ]
 
 
+def _date_from_match(m) -> Optional[PartialDate]:
+    g = m.groupdict()
+    month = MONTHS.get(g["mon"].lower()) if g.get("mon") else (int(g["m"]) if g.get("m") else None)
+    if g.get("mon") and month is None:
+        return None
+    day = int(g["d"]) if g.get("d") else None
+    return parse_date(f"{g['y']}-{month:02d}-{day:02d}" if month and day else
+                      f"{g['y']}-{month:02d}" if month else g["y"])
+
+
 def first_text_date(text: str) -> Optional[PartialDate]:
     """The most specific date mentioned in free text (month+year beats a bare year)."""
     for pat in _TEXT_DATE_PATTERNS:
         for m in pat.finditer(text):
-            g = m.groupdict()
-            month = MONTHS.get(g["mon"].lower()) if g.get("mon") else (int(g["m"]) if g.get("m") else None)
-            if g.get("mon") and month is None:
-                continue
-            day = int(g["d"]) if g.get("d") else None
-            d = parse_date(f"{g['y']}-{month:02d}-{day:02d}" if month and day else
-                           f"{g['y']}-{month:02d}" if month else g["y"])
+            d = _date_from_match(m)
+            if d:
+                return d
+    return None
+
+
+_NUMERIC_DATE_AT_START = re.compile(r"\s*(\d{1,2}[/.\-]\d{1,2}[/.\-]\d{4})\b")
+
+
+def date_at_start(text: str) -> Optional[PartialDate]:
+    """A date that starts the text ('on 3 May 1974', 'in 1974', '03/05/1974'), else None.
+    Used after 'born' so a later, unrelated date in the sentence is never read as a birth date."""
+    t = re.sub(r"^\s*(?:on|in|the)\s+", "", text or "", flags=re.I)
+    m = _NUMERIC_DATE_AT_START.match(t)
+    if m:
+        return parse_date(m.group(1))
+    t = t.lstrip()
+    for pat in _TEXT_DATE_PATTERNS:
+        m = pat.match(t)
+        if m:
+            d = _date_from_match(m)
             if d:
                 return d
     return None
@@ -224,21 +248,43 @@ def explicit_birth_dates(paragraph: str) -> List[PartialDate]:
     for sentence in _subject_sentences(paragraph):
         for match in _EXPLICIT_DOB.finditer(sentence):
             chunk = next(group for group in match.groups() if group)
-            found = first_text_date(chunk) or parse_date(chunk.strip(" ,"))
+            # The date must follow the cue directly: in "Born in Kano, he was arrested in
+            # March 2019" the 2019 is not a birth date.
+            found = date_at_start(chunk)
             if found is not None and found.year is not None and found not in out:
                 out.append(found)
     return out
 
 
-def death_from_notes(notes: str) -> Optional[PartialDate]:
+def _about_listed_person(before: str, name_parts: List[str]) -> bool:
+    """The words just before 'died' name the listed person ('Musa Bello died on …'), not a
+    co-defendant or a witness, and not as a possessive ("Bello's co-defendant died …").
+    A sentence that starts with 'He' or 'She' is about the profile's subject."""
+    if re.fullmatch(r"\s*(?:he|she)(?:\s+\w+ly)?\s*", before, re.I):
+        return True        # 'He died on …' / 'She reportedly died on …': the profile's subject
+    tail = fold(before[-60:]).lower()
+    for part in name_parts:
+        i = tail.rfind(part)
+        if i >= 0 and not re.match(r"\s*'s\b|’s\b", tail[i + len(part):]) and \
+                not re.search(r"\b(?:co-?defendant|witness|victim|partner|associate|accomplice|son|daughter|"
+                              r"wife|husband|brother|sister|father|mother)\b", tail[i + len(part):]):
+            return True
+    return False
+
+
+def death_from_notes(notes: str, name_parts: Optional[List[str]] = None) -> Optional[PartialDate]:
     """A date of death the profile states in prose, for the listed person.
 
-    'His father died on …' is not one. A death on or after the screening date
-    is still returned; the policy decides whether it is before screening.
+    'His father died on …' is not one, and neither is 'The co-defendant, John Smith, died
+    on …': '<name> died on' counts only when the listed person's own name comes just before
+    'died'. A 'Date of death:' line counts. A death on or after the screening date is
+    still returned; the policy decides whether it is before screening.
     """
     for sentence in _subject_sentences(notes):
         match = _DEATH.search(sentence)
         if not match:
+            continue
+        if match.group(1) is not None and not _about_listed_person(sentence[:match.start()], name_parts or []):
             continue
         chunk = next(group for group in match.groups() if group)
         found = parse_date(chunk.strip(" ,")) or first_text_date(chunk)
@@ -373,7 +419,8 @@ def build_hit(hit_row: dict, data=None) -> HitProfile:
     reports = dated_reports(hit_row.get("profile_notes"))
     earliest = min(reports, key=lambda d: (d.year, d.month, d.day)) if reports else None
     deaths = parse_date_list(hit_row.get("deceased_date"))
-    death = deaths[0] if deaths else death_from_notes(hit_row.get("profile_notes"))
+    own_parts = sorted({p for f in names for p in name_parts(f.value) if len(p) >= 3})
+    death = deaths[0] if deaths else death_from_notes(hit_row.get("profile_notes"), own_parts)
 
     return HitProfile(
         hit_id=hid,

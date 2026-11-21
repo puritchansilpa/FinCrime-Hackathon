@@ -29,7 +29,7 @@ import time
 import urllib.error
 import urllib.request
 
-from . import fallbacks, normalize
+from . import fallbacks, normalize, notes_parse
 
 API_URL = "https://api.x.ai/v1/chat/completions"
 DEFAULT_MODEL = "grok-4.20-0309-non-reasoning"   # dated, non-reasoning: fast and stable for extraction
@@ -214,6 +214,11 @@ def _country(s):
     return normalize.to_country(s) or fallbacks.to_country(s)
 
 
+def _snap_name(name, text):
+    """See notes_parse.extend_name: code, not the model, decides where a name ends."""
+    return notes_parse.extend_name(name, text)
+
+
 def extract_kyc_note(text: str, created_at: str = None):
     """LLM fallback for a kyc note. Same shape as notes_parse.parse_kyc_note, or None.
 
@@ -224,12 +229,14 @@ def extract_kyc_note(text: str, created_at: str = None):
     ans = chat_json(_KYC_SYSTEM, "Note:\n" + text, _KYC_SCHEMA, "kyc_note")
     if not ans:
         return None
-    name = ans.get("name") if _in_text(ans.get("name"), text) else None
+    name = _snap_name(ans.get("name"), text) if _in_text(ans.get("name"), text) else None
     dob_raw = ans.get("date_of_birth") if _in_text(ans.get("date_of_birth"), text) else None
     dob = _parse_date(dob_raw) if dob_raw else None
     country_raw = ans.get("document_country") if _in_text(ans.get("document_country"), text) else None
     check_raw = ans.get("check_date") if _in_text(ans.get("check_date"), text) else None
-    result = ans.get("result") if ans.get("result") in ("approved", "rejected", "expired") else None
+    # The check's result decides whether it is evidence at all, so it comes from the note's own
+    # wording (approved / rejected / expired / pending), never from the model (kyc-044).
+    result = notes_parse._result(text)
     if name is None and dob is None:
         return None
     return {

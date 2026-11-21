@@ -28,6 +28,8 @@ _MONTH = (r"(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|June?|July?|
 _DATE_RES = [
     re.compile(r"\b\d{4}-\d{1,2}-\d{1,2}\b"),
     re.compile(r"\b\d{1,2}/\d{1,2}/\d{4}\b"),
+    re.compile(r"\b\d{4}\.\d{1,2}\.\d{1,2}\b"),          # 1979.08.30
+    re.compile(r"\b\d{1,2}\.\d{1,2}\.\d{4}\b"),          # 30.08.1979
     re.compile(r"\b\d{1,2}(?:st|nd|rd|th)?(?:\s+of)?\s+" + _MONTH + r",?\s+\d{4}\b", re.I),
     re.compile(r"\b" + _MONTH + r"\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{4}\b", re.I),
     re.compile(r"\b" + _MONTH + r",?\s+\d{4}\b", re.I),
@@ -58,6 +60,7 @@ _DOC_RE = re.compile(r"\b(passport|national\s+id(?:entity)?(?:\s+card)?|id\s+car
 _ACRONYMS = {"DOB", "ID", "KYC", "AML", "UK", "US", "USA", "UAE", "EU", "OK", "N/A", "NA", "PEP",
              "IDV", "API", "OCR", "SSN", "TIN", "PRC", "DRC", "DPRK", "II", "III", "IV", "LLC", "LTD",
              "D.O.B", "D.O.B.", "QA"}
+_LEGAL_FORMS = {"LTD", "LLC"}
 _NAME_TOKEN = r"(?:N/A|[^\W\d_][^\W\d_'’.\-]*(?:['’.\-][^\W\d_]+)*\.?|\d+)"
 _UPPER_RUN = re.compile(_NAME_TOKEN + r"(?:[ \t]+" + _NAME_TOKEN + r")*")
 _NAME_CUES = re.compile(r"\b(?:for|of|holder|name(?:\s+on\s+(?:the\s+)?document)?|shows|verified|"
@@ -119,10 +122,11 @@ def find_name(text) -> Optional[tuple]:
             # trim acronyms and placeholders from the ends
             while run and (run[0][0].rstrip(".,") in _ACRONYMS or run[0][0].isdigit() or run[0][0] == "N/A"):
                 run = run[1:]
-            while run and (run[-1][0].rstrip(".,") in _ACRONYMS or run[-1][0].isdigit() or run[-1][0] == "N/A"):
+            while run and ((run[-1][0].rstrip(".,") in _ACRONYMS and run[-1][0].rstrip(".,") not in _LEGAL_FORMS)
+                           or run[-1][0].isdigit() or run[-1][0] == "N/A"):
                 run = run[:-1]
             real = [t for t, _, _ in run if _is_upper_word(t) and t.rstrip(".,") not in _ACRONYMS
-                    and len(t.strip(".,")) >= 2]
+                    and len(t.strip(".,")) >= 2 and not normalize.is_country_code(t)]
             if not real:
                 continue
             # a leading/trailing placeholder belongs to the name if it is next to it ("PAWEŁ N/A N/A")
@@ -188,6 +192,54 @@ def _result(text):
     return None
 
 
+_DOC_WORDS = (r"(?:passport|national\s+id(?:entity)?(?:\s+card)?|id\s+card|identity\s+card|"
+              r"driv(?:ing|er'?s)\s+licen[cs]e|residence\s+permit)")
+_CODE = r"(U\.S\.?|U\.K\.?|U\.A\.E\.?|[A-Z]{2,3})"
+_DOC_CODE_RE = re.compile(_DOC_WORDS + r"\s*\(?\s*" + _CODE + r"(?![A-Za-z.])|(?<![A-Za-z])" + _CODE + r"\s+" + _DOC_WORDS,
+                          re.I)
+
+
+def _code_next_to_document(text: str) -> list:
+    """'passport (GB)', 'passport NG', 'U.S. passport' -> the country. Only right next to a
+    document word, so a stray code elsewhere in the note is never read as the document's."""
+    out = []
+    for m in _DOC_CODE_RE.finditer(text or ""):
+        code = m.group(1) or m.group(2)
+        if code and code.rstrip(".") not in _ACRONYMS and normalize.is_country_code(code):
+            c = normalize.to_country(code)
+            if c and c not in out:
+                out.append(c)
+    return sorted(out)
+
+
+_PARTICLES = r"(?:dos|das|da|de|del|della|der|den|di|du|van|von|bin|binti|ibn|al|el|le|la|ter|y)"
+_CAP_WORD = r"[A-ZÀ-ÖØ-Þ][\w'’\-]*"
+
+
+def extend_name(name, text):
+    """The full name in the note that `name` starts: 'Maria Clara' in 'Maria Clara dos Santos
+    was verified' becomes 'Maria Clara dos Santos' (particles like dos, van, bin, al kept).
+    Used on names from the template learner and the LLM, so where a name ends is decided by
+    code, the same way every run. Stops at a provider, a country, a month or a country code."""
+    if not name or not text:
+        return name
+    pattern = r"\s+".join(re.escape(part) for part in str(name).split())
+    m = re.search(pattern, text, re.I)
+    if not m:
+        return name
+    end = m.end()
+    while True:
+        nxt = re.match(r"(\s+(?:" + _PARTICLES + r"\s+)?" + _CAP_WORD + r")", text[end:])
+        if not nxt:
+            break
+        word = nxt.group(1).split()[-1].strip("'’")
+        if _PROVIDER_RE.fullmatch(word) or fallbacks.to_country(word) or normalize.to_country(word) or \
+                word.lower() in normalize.MONTHS or normalize.is_country_code(word):
+            break
+        end += nxt.end()
+    return text[m.start():end].strip().rstrip(".,")
+
+
 def parse_kyc_note(text: str, created_at: str = None) -> Optional[dict]:
     """Read an identity-check note.
 
@@ -230,6 +282,9 @@ def parse_kyc_note(text: str, created_at: str = None) -> Optional[dict]:
 
     country_hits = fallbacks.find_countries(text, skip_spans=name_span)
     countries = sorted({c for c, _, _ in country_hits})
+    if not countries:
+        countries = _code_next_to_document(text) or \
+            sorted(set(normalize.find_place_countries(text, ignore_names=[name_hit[0]] if name_hit else [])))
     provider = _PROVIDER_RE.search(text)
     doc = _DOC_RE.search(text)
 
@@ -260,6 +315,17 @@ _RELATIVE = re.compile(
     re.I)
 
 
+# A trip or holiday is not where the customer lived, unless the sentence also says so.
+_TRAVEL = re.compile(r"\b(?:holiday\w*|vacation\w*|trip\w*|travel\w*|visit\w*|hotel\w*|touris\w*|"
+                     r"conference\w*|card\s+declined)\b", re.I)
+_STRONG_RESIDENCE = re.compile(r"\b(?:liv(?:ed|es|ing)|resid\w*|moved|relocat\w*|raised|grew\s+up|based|"
+                               r"home|national\s+of|originally\s+from|citizen\w*)\b", re.I)
+
+
+def _is_trip(sentence: str) -> bool:
+    return bool(_TRAVEL.search(sentence)) and not _STRONG_RESIDENCE.search(sentence)
+
+
 def _sentences(text: str) -> list:
     return [part.strip() for part in re.split(r"(?<=[.!?])\s+|\n+", text or "") if part.strip()]
 
@@ -274,7 +340,7 @@ def parse_residence_note(text: str) -> list:
         return []
     found = []
     for sentence in _sentences(text):
-        if _RELATIVE.search(sentence):
+        if _RELATIVE.search(sentence) or _is_trip(sentence):
             continue
         if not (_YEAR.search(sentence) or _RESIDENCE_CUE.search(sentence)):
             continue
@@ -291,7 +357,7 @@ def residence_without_place(text: str) -> bool:
     working cue but names no country or known city. Then 'every country tied to the
     customer' is not known, so location must not clear a hit (HANDOFF P1)."""
     for sentence in _sentences(text):
-        if _RELATIVE.search(sentence):
+        if _RELATIVE.search(sentence) or _is_trip(sentence):
             continue
         if _YEAR.search(sentence) and _RESIDENCE_CUE.search(sentence) \
                 and not fallbacks.find_countries(sentence) and not normalize.find_place_countries(sentence):

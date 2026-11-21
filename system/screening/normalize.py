@@ -271,6 +271,18 @@ def to_country(s) -> Optional[str]:  # noqa: F811  (wraps the lookup above with 
     return c
 
 
+def is_country_code(token: str) -> bool:
+    """'NG', 'GB', 'USA', 'U.S.', 'U.K.': an ISO code or dotted abbreviation of a country.
+    Placeholders ('NA', 'N/A') are not."""
+    t = (token or "").strip(" ,;:()[]")
+    letters = re.sub(r"[^A-Za-z]", "", t)
+    if not (2 <= len(letters) <= 3) or letters.lower() in NOT_COUNTRIES:
+        return False
+    if "." in t:
+        return _ckey(t) in _BY_NAME            # U.S. / U.K. / U.A.E.
+    return letters.isupper() and letters.lower() in _BY_CODE
+
+
 def is_unresolved_place(s) -> bool:
     """True for a non-empty place value that names no country we can identify
     ('Smallville', 'Lagos' before the city table knew it). Not for empty values or for

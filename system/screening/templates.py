@@ -287,6 +287,7 @@ def read_with_template(text, created_at, template, slots) -> dict:
     """Facts the template's roles give for this note, each checked; unchecked -> None."""
     by_role = {r: slot for r, slot in zip(template["roles"], slots) if r != "other"}
     name = by_role["name"][1].strip().rstrip(".,") if "name" in by_role else None
+    name = notes_parse.extend_name(name, text) if name else None   # keep particles: "… dos Santos"
     check = _parse_date(by_role["check_date"][1]) if "check_date" in by_role else None
     check = check or _parse_date(created_at)
     dob = _parse_date(by_role["dob"][1]) if "dob" in by_role else None
@@ -295,7 +296,9 @@ def read_with_template(text, created_at, template, slots) -> dict:
         dob = None
     doc_country = _country(by_role["doc_country"][1]) if "doc_country" in by_role else None
     return {"name": name or None, "dob": dob, "dob_raw": by_role["dob"][1] if dob else None,
-            "doc_country": doc_country, "checked_at": check, "result": template.get("result")}
+            "doc_country": doc_country, "checked_at": check,
+            # a shape the model learned takes its result from the note's own wording
+            "result": notes_parse._result(text) if template.get("source") == "llm" else template.get("result")}
 
 
 def needs_help(parsed, slots) -> bool:
