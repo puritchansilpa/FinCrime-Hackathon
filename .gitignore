@@ -1,7 +1,9 @@
-# Event data: participants only, never commit (brief section 5)
-dev/
+# NOTE: dev/ and the brief .docx are committed while this repo is PRIVATE.
+# The brief forbids publishing the dev data: before making the repo public,
+# submit from a fresh repo (system/ + output/ only) or purge dev/ from history.
+
+# Event workbook (dev/ is rebuilt from it)
 *.xlsx
-*.docx
 
 # Secrets
 .env

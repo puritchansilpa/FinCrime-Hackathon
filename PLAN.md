@@ -60,7 +60,7 @@ A bank's name screening raises **alerts**. Each alert has one or more **hits**, 
     - List fields are `; `-joined strings, and the real files may use arrays.
     - Two hits (`H-33106C`, `H-E7BFE8`) have profile notes cut at 32k characters.
     - The layout of `name_variants.json` is our guess: `{"name_variants": [[...]], "company_legal_forms": [...]}`.
-- `.gitignore` excludes `dev/`, `*.xlsx`, `*.docx`, `.env`.
+- `dev/` and the brief (`Screening — Brief v3 (same person or not).docx`) are **committed while the repo is private**. `.gitignore` excludes `*.xlsx` and `.env`.
 - **No system code exists yet.**
 
 ## 3. Decisions already made
@@ -378,8 +378,9 @@ class Decision:               # [built by B]
 
 - Each workstream uses its own branch (`ws-a-customer`, `ws-b-hit-policy`) and merges small PRs into `main` often.
 - Edit only the files your workstream owns. Change `models.py` only by agreement, in its own small PR.
-- Never commit `dev/`, `*.xlsx`, `*.docx` or `.env`. `.gitignore` already blocks them.
-- Each person regenerates `dev/` locally with `tools/xlsx_to_jsonl.py`.
+- `dev/` and the brief are committed **only while the repo is private**. The brief forbids publishing the dev data. Before going public, submit from a fresh repo containing only `system/` and `output/`, or purge `dev/` from history (`git filter-repo --path dev --invert-paths`).
+- Never commit `.env` or the API key.
+- `dev/` is in the repo, so no need to regenerate it. `tools/xlsx_to_jsonl.py` stays for rebuilding it from the workbook.
 
 ## 7. Open questions and risks
 
