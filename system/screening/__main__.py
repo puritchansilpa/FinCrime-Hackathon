@@ -1,64 +1,108 @@
-"""system/run <data folder> <output file>: one JSON line per hit.  [Workstream A]
+"""Entry point: python3 -m screening <data folder> <output file> [--llm]
 
-Deterministic: hits are processed in hit_id order and nothing depends on randomness,
-time or set order. A hit that fails for any reason is written as REVIEW (fail closed),
-so a bad record can never turn into a clearance or a missing line.
+Decides every hit in the data folder and writes one JSON line per hit, sorted by hit_id.
+A hit that crashes the pipeline is written as REVIEW / INSUFFICIENT_DATA (never a
+clearance), and the error goes to stderr, so one bad record cannot sink a run.
 """
-
+import argparse
 import json
+import os
 import sys
 import time
-from collections import Counter
-from pathlib import Path
+import traceback
 
-from . import customer
-from .hit import build_hit
+from . import customer, hit, llm, policy
 from .load import load_data
-from .models import INSUFFICIENT_DATA, REVIEW, Decision, Resolution
-from .policy import decide_alert_hit
+from .names import Variants
+from .models import REVIEW, Decision, Resolution
 
 
-def run(data_dir: str, out_path: str) -> Counter:
-    data = load_data(data_dir)
-    alerts = {a["alert_id"]: a for a in data.alerts}
-    resolutions = {}
-    counts = Counter()
-    lines = []
-    for hit_row in sorted(data.hits, key=lambda h: h["hit_id"]):
-        hid, aid = hit_row["hit_id"], hit_row.get("alert_id")
-        alert = alerts.get(aid, {"alert_id": aid})
+def _fallback(hit_id: str, alert_id: str, why: str) -> Decision:
+    return Decision(
+        hit_id=hit_id,
+        alert_id=alert_id,
+        decision=REVIEW,
+        reason_code="INSUFFICIENT_DATA",
+        customer_record_id=None,
+        reason=f"The system could not assess this hit ({why}), so it is left for review.",
+        evidence=[],
+    )
+
+
+def decide_hit(hit_row: dict, alert: dict, resolution: Resolution, data) -> Decision:
+    hp = hit.build_hit(hit_row, data)
+    persons = resolution.persons or [None]
+    variants = getattr(data, "variants", None)   # B's name-variant groups (POLICY.md principle 8)
+    decisions = [policy.decide(p, hp, alert, variants) for p in persons]
+    return policy.combine(decisions, hp, resolution.persons or None)
+
+
+def run(data_folder: str, output_path: str, use_llm: bool = False) -> dict:
+    started = time.time()
+    data = load_data(data_folder)
+    data.variants = Variants.load(data_folder)  # for B's name matching in policy.decide
+    data.use_llm = use_llm  # read by A7/B7 LLM pieces; off by default
+    llm.configure(use_llm)
+    if use_llm and not llm.enabled():
+        print("warning: --llm given but OPENROUTER_API_KEY is not set; running without the LLM",
+              file=sys.stderr)
+
+    results = {}
+    errors = 0
+
+    def safe_resolve(alert):
         try:
-            if aid not in resolutions:
-                try:
-                    resolutions[aid] = customer.resolve(alert, data)
-                except Exception as e:  # resolver bug: nobody found -> REVIEW
-                    print(f"warning: alert {aid}: customer lookup failed ({type(e).__name__}: {e})", file=sys.stderr)
-                    resolutions[aid] = Resolution(aid, [], [])
-            hp = build_hit(hit_row, data)
-            d = decide_alert_hit(resolutions[aid].persons, hp, alert, data.variants)
-        except Exception as e:
-            print(f"warning: hit {hid}: {type(e).__name__}: {e}", file=sys.stderr)
-            d = Decision(hid, aid, REVIEW, INSUFFICIENT_DATA, None,
-                         "The hit could not be processed automatically. It needs review.", [])
-        counts[d.decision] += 1
-        lines.append(json.dumps(d.to_json(), ensure_ascii=False))
-    out = Path(out_path)
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
-    return counts
+            return customer.resolve(alert, data)
+        except Exception:
+            traceback.print_exc(file=sys.stderr)
+            return None
+
+    for alert in data.alerts:
+        resolution = safe_resolve(alert)
+        for hit_row in data.hits_for_alert(alert):
+            hid = hit_row["hit_id"]
+            try:
+                if resolution is None:
+                    raise RuntimeError("customer resolution failed")
+                results[hid] = decide_hit(hit_row, alert, resolution, data)
+            except Exception as exc:
+                errors += 1
+                print(f"error on {hid}: {exc!r}", file=sys.stderr)
+                traceback.print_exc(file=sys.stderr)
+                results[hid] = _fallback(hid, alert["alert_id"], "internal error")
+
+    # Hits whose alert is not in alerts.jsonl still get a line.
+    for hid, hit_row in data.hits.items():
+        if hid not in results:
+            results[hid] = _fallback(hid, hit_row.get("alert_id") or "", "its alert is missing")
+
+    out_dir = os.path.dirname(os.path.abspath(output_path))
+    os.makedirs(out_dir, exist_ok=True)
+    with open(output_path, "w", encoding="utf-8", newline="\n") as fh:
+        for hid in sorted(results):
+            fh.write(json.dumps(results[hid].to_output(), ensure_ascii=False) + "\n")
+
+    stats = {"hits": len(results), "errors": errors, "seconds": round(time.time() - started, 1)}
+    print(f"wrote {stats['hits']} hits to {output_path} in {stats['seconds']}s "
+          f"({errors} errors)", file=sys.stderr)
+    if llm.enabled():
+        stats["llm"] = llm.stats()
+        print(f"LLM: {stats['llm']}", file=sys.stderr)
+    return stats
 
 
-def main(argv) -> int:
-    if len(argv) != 2:
-        print("usage: system/run <data folder> <output file>", file=sys.stderr)
-        return 2
-    start = time.time()
-    counts = run(argv[0], argv[1])
-    total = sum(counts.values())
-    print(f"{total} hits written to {argv[1]} in {time.time() - start:.1f}s: " +
-          ", ".join(f"{k} {counts[k]}" for k in sorted(counts)), file=sys.stderr)
+def main(argv=None) -> int:
+    parser = argparse.ArgumentParser(prog="system/run", description=__doc__.splitlines()[0])
+    parser.add_argument("data_folder")
+    parser.add_argument("output_file")
+    parser.add_argument("--llm", action="store_true",
+                        help="enable the OpenRouter LLM fallbacks (needs OPENROUTER_API_KEY)")
+    args = parser.parse_args(argv)
+    if not os.path.isdir(args.data_folder):
+        parser.error(f"data folder not found: {args.data_folder}")
+    run(args.data_folder, args.output_file, use_llm=args.llm)
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv[1:]))
+    sys.exit(main())

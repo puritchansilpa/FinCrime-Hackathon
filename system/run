@@ -1,5 +1,5 @@
 #!/bin/sh
-# Usage: system/run <data folder> <output file>
-# Python 3 standard library only. No network access unless --llm is added later.
-DIR="$(cd "$(dirname "$0")" && pwd)"
-exec env PYTHONPATH="$DIR" PYTHONHASHSEED=0 python3 -m screening "$@"
+# Usage: system/run <data folder> <output file> [--llm]
+# Python 3 standard library only. LLM features are off unless --llm is given.
+here="$(cd "$(dirname "$0")" && pwd)"
+PYTHONPATH="$here${PYTHONPATH:+:$PYTHONPATH}" PYTHONIOENCODING=utf-8 exec python3 -m screening "$@"

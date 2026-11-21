@@ -7,9 +7,9 @@ Python 3.9 compatible: use Optional/List, not `X | Y`.
 from dataclasses import dataclass, field
 from typing import Any, List, Optional
 
-# Decisions
-DIFFERENT = "DIFFERENT_ENTITY"
-SAME = "SAME_ENTITY"
+# Decisions (both spellings are part of the contract: B uses DIFFERENT/SAME, A uses the long names)
+DIFFERENT_ENTITY = DIFFERENT = "DIFFERENT_ENTITY"
+SAME_ENTITY = SAME = "SAME_ENTITY"
 REVIEW = "REVIEW"
 
 # Reason codes (POLICY.md)
@@ -24,6 +24,14 @@ NAME_DOB_MATCH = "NAME_DOB_MATCH"
 NAME_LOCATION_MATCH = "NAME_LOCATION_MATCH"
 INSUFFICIENT_DATA = "INSUFFICIENT_DATA"
 AMBIGUOUS_CUSTOMER_RECORD = "AMBIGUOUS_CUSTOMER_RECORD"
+
+# The reason codes that belong to each decision (POLICY.md; validate.py checks this)
+REASON_CODES = {
+    DIFFERENT_ENTITY: (TEMPORAL_IMPOSSIBILITY, DOB_MISMATCH, LOCATION_MISMATCH,
+                       NAME_MISMATCH_VERIFIED, ENTITY_TYPE_MISMATCH, DECEASED),
+    SAME_ENTITY: (NAME_DOB_LOCATION_MATCH, NAME_DOB_MATCH, NAME_LOCATION_MATCH),
+    REVIEW: (INSUFFICIENT_DATA, AMBIGUOUS_CUSTOMER_RECORD),
+}
 
 AMBIGUOUS = "AMBIGUOUS"  # customer_record_id when more than one person fits
 
@@ -103,7 +111,8 @@ class Decision:
     reason: str
     evidence: List[str]                 # sorted IDs of the records that decided it
 
-    def to_json(self) -> dict:
+    def to_output(self) -> dict:
+        """One output line, in the field order the brief lists."""
         return {
             "hit_id": self.hit_id,
             "alert_id": self.alert_id,
@@ -111,5 +120,7 @@ class Decision:
             "reason_code": self.reason_code,
             "customer_record_id": self.customer_record_id,
             "reason": self.reason,
-            "evidence": list(self.evidence),
+            "evidence": sorted(set(self.evidence)),
         }
+
+    to_json = to_output

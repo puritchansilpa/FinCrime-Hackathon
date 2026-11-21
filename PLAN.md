@@ -72,7 +72,11 @@ A bank's name screening raises **alerts**. Each alert has one or more **hits**, 
   - Practice labels use lists for `reason_codes`, `customer_record_ids`, `evidence` and `path`.
 - `validate.py` accepts evidence items that are record IDs, URLs, or hit fields as `H-XXXXXX#field`.
 - `dev/` and the brief (`Screening — Brief v3 (same person or not).docx`) are **committed while the repo is private**. `.gitignore` excludes `*.xlsx`, `.env`, Office lock files and the pasted `/screening/` kit copy.
-- **System status:** the pipeline runs end to end.
+- **System status (A + B merged on `merge-a-b`):** the official pipeline runs end to end on dev.
+  - **`validate.py`:** 0 problems, 50/50 practice decisions, **0 unsafe clearances**, decision score 100.0.
+  - **`tools/score.py`:** reason code, customer record and evidence (precision and recall) all 100%.
+  - **Runs:** about 20 s for 819 hits; `tools/check_runs.py dev --runs 5` gives byte-identical output.
+- **Before the merge (B's branch alone):** the pipeline ran end to end.
   - **Placeholder customer lookup:** `customer.py` is A's file and will be replaced. It only follows links, but it already reads KYC and residence notes.
   - **Performance:** 819 hits in about 1 second; the output is byte-identical across runs.
   - **`validate.py --score`:** 0 problems, 40/50 decisions, **0 unsafe clearances**, decision score 74.1.
