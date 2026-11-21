@@ -4,7 +4,7 @@
 
 `practice_labels.jsonl` uses the practice-label fields (`decision`, `reason_codes`, `customer_record_ids`, `evidence`, `reference_reason`, `path`) plus `category`, `weakness`, what a naive implementation would output, `module` when a miss has a home, and the policy note when there is one.
 
-The system under test is the merged pipeline on `main` (commit `7ddca7b`). This branch does not change that code. `python3 adversarial/build_dataset.py` rewrites the JSONL.
+The comparison baseline is the merged pipeline on `main` (commit `7ddca7b`; current `main` at `07ab92f` has the same decision path with the LLM off). This branch changes that code, only for the misses below. `python3 adversarial/build_dataset.py` rewrites the JSONL.
 
 ## Run
 
@@ -22,10 +22,24 @@ The third batch (ADV-H-109 through ADV-H-128) is empty fields, bad dates and cou
 
 ## Current pipeline on this branch
 
-`python3 adversarial/run.py`: accuracy 126/128, wrong `DIFFERENT_ENTITY` 2.
+`python3 adversarial/run.py`: accuracy 128/128, wrong `DIFFERENT_ENTITY` 0.
 
-- ADV-H-110 `REVIEW` → `DIFFERENT_ENTITY` `NAME_MISMATCH_VERIFIED`. The hit's only name is `N/A`. `policy.py` (Workstream B) treats that placeholder as a name that fails to agree and clears. The label leaves it for review. `ambiguous_policy`.
-- ADV-H-117 `REVIEW` → `DIFFERENT_ENTITY` `DOB_MISMATCH`. 31 February does not parse in `normalize.py`, then `fallbacks.py` (Workstream A) accepts day 31 in any month, so the approved date becomes 31 Feb 1980 and contradicts 3 March. A missing date is not a mismatch.
+Practice labels: 50/50, 0 unsafe clearances. Five runs of `dev` are byte-identical. `output/dev.jsonl` and `output/review_queue.jsonl` on this branch are regenerated from that pipeline.
+
+Two further fixes, on top of the phone, document, note and profile fixes:
+
+- ADV-H-110. `policy.py` ignores a hit name with no real parts (`N/A`, `NA`, `TEST`, `UNKNOWN`, `XXX`, blank). A placeholder is missing, so it cannot be `NAME_MISMATCH_VERIFIED`. A real alias beside a placeholder can still mismatch.
+- ADV-H-117. `normalize.py` already rejects a day the month does not have. `fallbacks.py` `_mk` now does the same (`calendar.monthrange`), so 31 Feb, 30 Feb, 31 Apr, month 13, year 0000 and 29 Feb 1900 stay unknown, and 29 Feb 2000 still parses. An unknown date cannot contradict.
+
+Sweep of the same class. Changed only what could become a contradiction:
+
+- `fallbacks.py` `to_country` read uppercase `NA` as Namibia before the placeholder list. `normalize.py` already returns nothing for `NA`, `N/A` and `UNKNOWN`. The fallback now does too, so a placeholder country cannot produce a location clear. No dev customer or hit uses these values.
+- Empty `dobs` entries and unparseable dates are already dropped by `parse_date_list`. They never become a date.
+- `1900-01-01` is left as a real date. ADV-H-118 is `DIFFERENT_ENTITY` `DOB_MISMATCH`, and `POLICY.md` does not call that date a placeholder. `1970-01-01` is left as a real date for the same reason.
+
+Dev decisions versus `7ddca7b` (and versus current `main`, same decision path): 16 changed, 10 `REVIEW` to `DIFFERENT_ENTITY` and 6 `REVIEW` to `SAME_ENTITY`, each from an explicit "was born" sentence. The placeholder-name and impossible-date fixes change no further dev decision. H-0442F5 is `DIFFERENT_ENTITY` `DOB_MISMATCH`: the profile says the subject was born in 1973, and the verified date is 1981-06-10 from NOTE-407861 (CUS-929768).
+
+The category table is `main` at `7ddca7b`, before any of these fixes.
 
 | Category | Hits | Misses | Wrong clear |
 |---|---|---|---|
