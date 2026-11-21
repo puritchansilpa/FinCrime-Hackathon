@@ -1,0 +1,14 @@
+# Event data: participants only, never commit (brief section 5)
+dev/
+*.xlsx
+*.docx
+
+# Secrets
+.env
+*.key
+
+# Local clutter
+.DS_Store
+.idea/
+__pycache__/
+*.pyc
