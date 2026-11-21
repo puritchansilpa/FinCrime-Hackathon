@@ -6,6 +6,7 @@ fallbacks: customer.py always calls B's function first and only uses these when 
 returns nothing. Once B ships B1/B2, B can adopt or replace any of this; then this
 module can be deleted.
 """
+import calendar
 import re
 import unicodedata
 from functools import lru_cache
@@ -22,12 +23,14 @@ _MONTHS["sept"] = 9
 
 
 def _mk(y, mo=None, d=None):
+    """None unless the date can exist. 31 Feb, 31 Apr, month 13 and year 0000 are unknown."""
     if not 1000 <= y <= 2999:
         return None
     if mo is not None and not 1 <= mo <= 12:
         return None
-    if d is not None and not 1 <= d <= 31:
-        return None
+    if d is not None:
+        if mo is None or not 1 <= d <= calendar.monthrange(y, mo)[1]:
+            return None
     return PartialDate(y, mo, d)
 
 
@@ -202,6 +205,10 @@ def to_country(s):
         return None
     text = re.sub(r"\[[^\]]*\]|\([^)]*\)", " ", str(s)).strip()
     if not text:
+        return None
+    # "NA" is Namibia's code and also a placeholder. Placeholders are not countries,
+    # so they must lose before the ISO lookup (otherwise N/A becomes Namibia and can clear).
+    if _fold(text) in NOT_COUNTRIES:
         return None
     if re.fullmatch(r"[A-Z]{2}", text) and text in _ISO_TABLE:   # codes are upper case
         return _ISO_TABLE[text]

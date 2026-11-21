@@ -35,6 +35,15 @@ class TestDates(unittest.TestCase):
         self.assertIsNone(parse_date(""))
         self.assertIsNone(parse_date("unknown"))
         self.assertIsNone(parse_date("31/02/2000"))                      # impossible date
+        for bad in ("30/02/1980", "31/04/1980", "31 Feb 1980", "0000-01-01",
+                    "1980-13-01", "1980-02-31", "29/02/1900"):
+            self.assertIsNone(parse_date(bad), bad)
+        self.assertEqual(parse_date("29/02/2000"), D(2000, 2, 29))
+        self.assertEqual(parse_date_list("31/02/1980; ; 1980"), [D(1980)])
+        self.assertIsNone(to_country("N/A"))
+        self.assertIsNone(to_country("NA"))
+        self.assertIsNone(to_country("UNKNOWN"))
+        self.assertIsNone(to_country("   "))
 
     def test_list_field(self):
         self.assertEqual(parse_date_list("1989; 1988"), [D(1989), D(1988)])
