@@ -6,7 +6,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "system"))
 
 from screening.models import COMPANY, PartialDate as D  # noqa: E402
 from screening.hit import (  # noqa: E402
-    age_at_date, birth_years, build_hit, dated_reports, hit_countries, listing_phrase,
+    age_at_date, birth_years, build_hit, dated_reports, death_from_notes,
+    explicit_birth_dates, hit_countries, listing_phrase,
 )
 
 
@@ -85,6 +86,66 @@ class TestBuildHit(unittest.TestCase):
         self.assertEqual([(c.source_id, c.value) for c in hp.dob_candidates], [("SR-1", frozenset({1985, 1986}))])
         hp = build_hit({**row, "dobs": "1985"}, index)
         self.assertEqual([c.origin for c in hp.dob_candidates], ["dobs"])
+
+    def test_explicit_birth_date_in_the_first_paragraph(self):
+        row = {"hit_id": "H", "alert_id": "A", "entity_type": "Individual", "name": "Lina Fierro",
+               "countries": "Spain",
+               "profile_notes": "Lina Fierro was born on 12 March 1975 in Madrid."}
+        hp = build_hit(row, {})
+        self.assertEqual(hp.dob_candidates[0].value, D(1975, 3, 12))
+        self.assertEqual(explicit_birth_dates("Lina Gauthier, b. 12 March 1976, Lyon."), [D(1976, 3, 12)])
+        self.assertEqual(explicit_birth_dates("DOB: 5 June 1980."), [D(1980, 6, 5)])
+        # a contradicting date is still a date; the second paragraph does not count
+        notes = "Lina Langlois sits on the city council in Lyon.\n\nShe was born on 12 March 1960."
+        self.assertEqual(build_hit({**row, "profile_notes": notes}, {}).dob_candidates, [])
+
+    def test_a_relative_age_is_not_the_hit_date_of_birth(self):
+        notes = ("His father, not the listed person, was aged 70 in March 2019. "
+                 "He keeps a low profile in Spain.")
+        row = {"hit_id": "H", "alert_id": "A", "entity_type": "Individual", "name": "Lina Jankovic",
+               "countries": "Spain", "profile_notes": notes}
+        self.assertEqual(build_hit(row, {}).dob_candidates, [])
+
+    def test_listing_phrase_in_the_title_still_needs_the_hit_country_and_kind(self):
+        row = {"hit_id": "H", "alert_id": "A", "entity_type": "Individual", "name": "Pilar Mbeki",
+               "primary_category": "PEP", "countries": "Spain"}
+        index = {"mbeki pilar": [
+            {"result_id": "SR-T", "title": "Pilar Mbeki, a politically exposed person",
+             "snippet": "In March 2019, Spain noted Pilar Mbeki, who was 45 and sat on a council."},
+            {"result_id": "SR-N", "title": "Hugo Qureshi, a politically exposed person",
+             "snippet": "In March 1980, Brazil noted Hugo Qureshi, who was 40 and worked as a coach."},
+            {"result_id": "SR-W", "title": "Nuria Radovan, a sanctioned individual",
+             "snippet": "In March 1980, Spain noted Nuria Radovan, who was 40 and sat on a council."},
+        ]}
+        # only the first result is this query; the others are here to show the filters
+        hp = build_hit(row, {"mbeki pilar": [index["mbeki pilar"][0]]})
+        self.assertEqual(hp.dob_origin, "search")
+        self.assertEqual(hp.dob_candidates[0].value, frozenset({1973, 1974}))
+        country_in_title = build_hit(
+            {**row, "name": "Ines Okeke"},
+            {"ines okeke": [{
+                "result_id": "SR-C",
+                "title": "Ines Okeke, a politically exposed person in Spain",
+                "snippet": "In March 2019, a council noted Ines Okeke, who was 45.",
+            }]})
+        self.assertEqual(country_in_title.dob_origin, "search")
+        namesake = build_hit({**row, "name": "Hugo Qureshi"},
+                             {"hugo qureshi": [index["mbeki pilar"][1]]})
+        self.assertEqual(namesake.dob_candidates, [])
+        wrong_kind = build_hit({**row, "name": "Nuria Radovan"},
+                               {"nuria radovan": [index["mbeki pilar"][2]]})
+        self.assertEqual(wrong_kind.dob_candidates, [])
+
+    def test_death_in_the_profile_is_the_subject_only(self):
+        self.assertEqual(death_from_notes("He died on 3 March 2018 in Madrid."), D(2018, 3, 3))
+        self.assertEqual(death_from_notes("He passed away on 3 March 2018."), D(2018, 3, 3))
+        self.assertEqual(death_from_notes("Date of death: 2018-03-03."), D(2018, 3, 3))
+        self.assertEqual(death_from_notes("He died on 1 December 2026."), D(2026, 12, 1))
+        self.assertEqual(death_from_notes("He died on 15 November 2026."), D(2026, 11, 15))
+        self.assertIsNone(death_from_notes("His father died on 3 March 2018. The listed person is alive."))
+        row = {"hit_id": "H", "alert_id": "A", "entity_type": "Individual", "name": "Soren",
+               "profile_notes": "He died on 3 March 2018."}
+        self.assertEqual(build_hit(row, {}).death_date.value, D(2018, 3, 3))
 
     def test_company_uses_dobs_only(self):
         row = {"hit_id": "H-2", "alert_id": "A-2", "entity_type": "Company", "name": "Acme Ltd",

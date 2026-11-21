@@ -24,6 +24,7 @@ def fmt_list(items: Iterable[str]) -> str:
 def hit_dob_phrase(cands: List[Fact]) -> str:
     """'the hit's listed date of birth is 1962-09-10' / '… profile notes put its birth year at 1986 or 1987'."""
     listed = [c for c in cands if c.origin == "dobs"]
+    stated = [c for c in cands if c.origin == "profile_dob"]
     profile = [c for c in cands if c.origin == "profile_age"]
     search = [c for c in cands if c.origin == "search"]
     parts = []
@@ -31,6 +32,9 @@ def hit_dob_phrase(cands: List[Fact]) -> str:
         vals = ", ".join(fmt_date(c.value) for c in listed)
         parts.append(("the hit's listed date of birth is " if len(listed) == 1 else
                       "the hit's listed dates of birth are ") + vals)
+    if stated:
+        vals = ", ".join(fmt_date(c.value) for c in stated)
+        parts.append("the hit's profile notes put its birth date at " + vals)
     if profile:
         parts.append("the hit's profile notes put its birth year at " + "; ".join(fmt_date(c.value) for c in profile))
     if search:

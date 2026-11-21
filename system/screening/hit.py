@@ -190,6 +190,63 @@ def first_paragraph(notes: str) -> str:
     return re.split(r"\n\s*\n", notes, maxsplit=1)[0] if notes else ""
 
 
+def _sentences(text: str) -> List[str]:
+    """Split on sentence ends, but not on 'b.' or 'Dr.'."""
+    protected = re.sub(r"\b([A-Za-z])\.\s+", lambda m: m.group(0).replace(" ", "\x00"), text or "")
+    parts = re.split(r"(?<=[.!?])\s+|\n+", protected)
+    return [part.replace("\x00", " ").strip() for part in parts if part.strip()]
+
+
+# A sentence about a relative is not a fact about the listed person.
+_RELATIVE = re.compile(
+    r"\b(?:her|his|their)\s+(?:sister|brother|father|mother|husband|wife|son|daughter|"
+    r"parent|parents|sibling|uncle|aunt|cousin|spouse)\b"
+    r"|\b(?:sister|brother|father|mother)\b",
+    re.I)
+_EXPLICIT_DOB = re.compile(
+    r"\b(?:born(?:\s+on)?|b\.)\s+([^.;\n]{0,48})|\bDOB\s*:\s*([^.;\n]{0,48})",
+    re.I)
+_DEATH = re.compile(
+    r"\b(?:died|passed\s+away)\s+on\s+([^.;\n]{0,48})|\bdate\s+of\s+death\s*:\s*([^.;\n]{0,48})",
+    re.I)
+
+
+def _subject_sentences(text: str) -> List[str]:
+    return [sentence for sentence in _sentences(text) if not _RELATIVE.search(sentence)]
+
+
+def explicit_birth_dates(paragraph: str) -> List[PartialDate]:
+    """Full birth dates stated in the first paragraph ('born on', 'b.', 'DOB:').
+
+    A date in a sentence about a relative is not the listed person's.
+    """
+    out: List[PartialDate] = []
+    for sentence in _subject_sentences(paragraph):
+        for match in _EXPLICIT_DOB.finditer(sentence):
+            chunk = next(group for group in match.groups() if group)
+            found = first_text_date(chunk) or parse_date(chunk.strip(" ,"))
+            if found is not None and found.year is not None and found not in out:
+                out.append(found)
+    return out
+
+
+def death_from_notes(notes: str) -> Optional[PartialDate]:
+    """A date of death the profile states in prose, for the listed person.
+
+    'His father died on …' is not one. A death on or after the screening date
+    is still returned; the policy decides whether it is before screening.
+    """
+    for sentence in _subject_sentences(notes):
+        match = _DEATH.search(sentence)
+        if not match:
+            continue
+        chunk = next(group for group in match.groups() if group)
+        found = parse_date(chunk.strip(" ,")) or first_text_date(chunk)
+        if found is not None and found.year is not None and found.day is not None:
+            return found
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Dated reports
 # ---------------------------------------------------------------------------
@@ -244,14 +301,24 @@ def relevant_search_results(hit_row, countries: List[str], data) -> List[Tuple[d
     phrase = _phrase_core(listing_phrase(hit_row))
     out = []
     for r in sorted(rows, key=lambda r: r.get("result_id") or ""):
-        text = " ".join(x for x in (r.get("title"), r.get("snippet")) if x)
+        title = r.get("title") or ""
         snippet = r.get("snippet") or ""
-        if phrase not in re.sub(r"\s+", " ", snippet.lower()):
+        # The listing phrase and the country may sit in the title. The phrase
+        # still has to be this hit's own kind of listing, and the country still
+        # has to be one tied to the hit, so a namesake title is not used.
+        blob = re.sub(r"\s+", " ", f"{title} {snippet}".lower())
+        if phrase not in blob:
             continue
-        mentioned = find_countries(snippet, ignore_names=[hit_row.get("name") or "", (r.get("title") or "").split(" - ")[0]])
+        # Blank the person's name so "Jordan Smith" is not the country Jordan.
+        # Only a "Name - source" title is blanked wholesale; otherwise "in Spain"
+        # later in the title would be wiped out with the name.
+        ignore = [hit_row.get("name") or ""]
+        if " - " in title:
+            ignore.append(title.split(" - ")[0])
+        mentioned = find_countries(f"{title} {snippet}", ignore_names=ignore)
         if not any(c in countries for c in mentioned):
             continue
-        aa = age_at_date(snippet, snippet=True)
+        aa = age_at_date(snippet, snippet=True) or age_at_date(title, snippet=True)
         if aa is None:
             continue
         out.append((r, birth_years(*aa)))
@@ -273,10 +340,17 @@ def build_hit(hit_row: dict, data=None) -> HitProfile:
     if kind != COMPANY:
         # SOP order: the dobs field, else a sentence in the first paragraph of the notes,
         # else (when neither gives one) relevant web search results.
-        aa = None if cands else age_at_date(first_paragraph(hit_row.get("profile_notes")))
-        if aa is not None:
-            cands.append(Fact(birth_years(*aa), hid, "profile_age"))
-            origin = "profile_age"
+        paragraph = "" if cands else first_paragraph(hit_row.get("profile_notes"))
+        stated = explicit_birth_dates(paragraph) if paragraph else []
+        if stated:
+            cands.extend(Fact(d, hid, "profile_dob") for d in stated)
+            origin = "profile_dob"
+        else:
+            subject = " ".join(_subject_sentences(paragraph)) if paragraph else ""
+            aa = age_at_date(subject) if subject else None
+            if aa is not None:
+                cands.append(Fact(birth_years(*aa), hid, "profile_age"))
+                origin = "profile_age"
         if not cands:
             for r, years in relevant_search_results(hit_row, countries, data):
                 cands.append(Fact(years, r["result_id"], "search"))
@@ -286,7 +360,7 @@ def build_hit(hit_row: dict, data=None) -> HitProfile:
     reports = dated_reports(hit_row.get("profile_notes"))
     earliest = min(reports, key=lambda d: (d.year, d.month, d.day)) if reports else None
     deaths = parse_date_list(hit_row.get("deceased_date"))
-    death = deaths[0] if deaths else None
+    death = deaths[0] if deaths else death_from_notes(hit_row.get("profile_notes"))
 
     return HitProfile(
         hit_id=hid,
