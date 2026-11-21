@@ -4,7 +4,8 @@ import tempfile
 import unittest
 
 import _paths  # noqa: F401
-from screening.customer import _local_parse_date, dob_fits, name_fits, resolve
+from screening.customer import dob_fits, name_fits, resolve, search
+from screening.fallbacks import parse_date as _local_parse_date
 from screening.load import load_data
 from screening.models import PartialDate
 
@@ -32,6 +33,21 @@ CUSTOMERS = [
     cust("CUS-20", "Badsha Mia", "January 12, 1992", email="Badsha.Mia@Mail.example"),
     cust("CUS-30", "Ana Lima", "1990-01-01"),
     cust("CUS-31", "Rui Lima", "1991-01-01"),
+    # search targets (no link)
+    cust("CUS-40", "Christopher Paul George", "17 September 1951", nationality="Netherlands",
+         residence_country="Netherlands", city="Munich", address="152 Station Road, Munich"),
+    cust("CUS-41", "Christopher Paul George", "17 September 1951", nationality="Dutch",
+         residence_country="United States", city="Chicago", address="116 Church Lane, Chicago"),
+    cust("CUS-42", "Christopher Paul George", "1960-01-01", nationality="Netherlands",
+         residence_country="NL", city="Munich", address="1 Road, Munich"),
+    cust("CUS-50", "N26 Bank AG", "2013-02", entity_type="Company", nationality="Germany",
+         residence_country="Germany", city="Berlin", address="125 Church Lane, Berlin"),
+    cust("CUS-51", "N26 Bank AG", "2013-02", nationality="Germany", residence_country="DE",
+         city="Berlin", address="1 Road, Berlin"),  # an Individual: wrong type for a company alert
+    cust("CUS-60", "Mohammad Nadeem", "April 5, 1990", nationality="Pakistan", residence_country="PK"),
+    cust("CUS-61", "Mohammad Nadeem", "18/05/1990", nationality="Pakistani", residence_country="Pakistan"),
+    cust("CUS-62", "Mohammad Nadeem", "18/05/1990", nationality="Indian", residence_country="India"),
+    cust("CUS-70", "Jonathon Smyth", "1985-02-02", nationality="British", residence_country="GB"),
 ]
 ACCOUNTS = [
     {"account_id": "ACC-J", "customer_id": "CUS-10", "login_handle": "elvira1"},
@@ -128,7 +144,37 @@ class ResolveTests(unittest.TestCase):
         self.assertEqual(res.persons, [])
         res = resolve(alert("A10", "Nobody"), self.data)
         self.assertEqual(res.persons, [])
-        self.assertIn("no link", res.path[-1])
+        self.assertIn("no record fits", res.path[-1])
+
+    def test_search_uses_name_dob_country_and_city(self):
+        a = alert("S1", "Christopher Paul George", "1951-09-17", country="Netherlands", city="Munich")
+        res = resolve(a, self.data)
+        self.assertEqual(self.ids(res), [["CUS-40"]])   # CUS-41: Chicago; CUS-42: other DOB
+        self.assertIn("name, date of birth, country and city -> customers -> CUS-40", res.path[0])
+
+    def test_search_country_accepts_codes_and_demonyms(self):
+        a = alert("S2", "Muhammad Nadeem", "1990", country="Pakistan")
+        self.assertEqual([r["record_id"] for r in search(a, self.data)], ["CUS-60", "CUS-61"])
+
+    def test_search_respects_entity_type(self):
+        a = alert("S3", "N26 Bank SE", "2013-02", country="Germany", city="Berlin", entity_type="Company")
+        self.assertEqual([r["record_id"] for r in search(a, self.data)], ["CUS-50"])
+
+    def test_search_finds_typos_in_every_part_through_birth_year(self):
+        a = alert("S4", "Jonathan Smith", "1985", country="United Kingdom")
+        self.assertEqual([r["record_id"] for r in search(a, self.data)], ["CUS-70"])
+
+    def test_search_without_match_finds_nobody(self):
+        res = resolve(alert("S5", "Nobody Atall", "1900"), self.data)
+        self.assertEqual(res.persons, [])
+        self.assertIn("no record fits", res.path[0])
+
+    def test_link_filter_also_uses_country(self):
+        # both Lima holders fit the name; only one fits the screened country
+        res = resolve(alert("S6", "Lima", None, account_ref="ACC-L", country="Spain"), self.data)
+        self.assertEqual(len(res.persons), 2)
+        res = resolve(alert("S7", "Lima", None, account_ref="ACC-L", country="France"), self.data)
+        self.assertIn("fit none of them", res.path[-1])
 
     def test_person_facts_carry_their_source(self):
         person = resolve(alert("A11", "Luca Morillo", "1940", account_ref="ACC-J"), self.data).persons[0]

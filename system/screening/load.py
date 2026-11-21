@@ -149,6 +149,7 @@ class Data:
     customers_by_name_token: dict = field(default_factory=dict) # token -> [customer]
     notes_by_email: dict = field(default_factory=dict)          # email -> [note] by created_at
     search_by_query: dict = field(default_factory=dict)         # query -> [result]
+    customers_by_birth_year: dict = field(default_factory=dict) # year -> [customer]
 
     def hits_for_alert(self, alert: dict) -> list:
         """The alert's hit rows, sorted by hit_id (hits missing from hits.jsonl are skipped)."""
@@ -230,6 +231,16 @@ def load_data(folder: str) -> Data:
     d.search_by_query = _index(raw["search_results"], lambda r: norm_key(r.get("query")),
                                lambda r: _s(r.get("result_id")))
 
+    # Birth-year buckets: a second way to find search candidates whose name has typos
+    # in every part (the name-token index would miss them).
+    from . import fallbacks
+    years = defaultdict(list)
+    for c in customers:
+        dob = fallbacks.parse_date(c.get("dob"))
+        if dob is not None and dob.year is not None:
+            years[dob.year].append(c)
+    d.customers_by_birth_year = dict(years)
+
     policy = os.path.join(folder, "POLICY.md")
     if os.path.exists(policy):
         with open(policy, encoding="utf-8-sig") as fh:
@@ -240,4 +251,5 @@ def load_data(folder: str) -> Data:
             loaded = json.load(fh)
         # Accept either {"name_variants": [...], ...} or a bare list of variant groups.
         d.name_variants = loaded if isinstance(loaded, dict) else {"name_variants": loaded}
+    fallbacks.configure(d.name_variants)
     return d
