@@ -291,8 +291,14 @@ def _parsed_kyc_note(note):
         # Outside the kyc channel, only a note that clearly records a check counts.
         if p and (is_kyc or (p["dob"] and p["name"] and (p["provider"] or p["doc_type"]))):
             parsed = p
-        if parsed is None and is_kyc and llm.enabled():
-            parsed = llm.extract_kyc_note(text, note.get("created_at"))
+        # LLM fallback (only with --llm): fill what the regex could not read in a kyc note.
+        # Values the regex did read are kept; the LLM's values are verified against the text.
+        if is_kyc and llm.enabled() and (parsed is None or not parsed.get("name")
+                                         or not parsed.get("dob") or not parsed.get("result")):
+            extra = llm.extract_kyc_note(text, note.get("created_at"))
+            if extra:
+                parsed = dict(extra) if parsed is None else {
+                    k: (parsed.get(k) if parsed.get(k) is not None else extra.get(k)) for k in extra}
         cache[key] = parsed
     return cache[key]
 
@@ -372,7 +378,11 @@ def _person_from_records(records, data) -> Person:
         for note in _notes_for(r, data):
             if str(note.get("channel") or "").casefold() == "kyc":
                 continue
-            for c in notes_parse.parse_residence_note(note.get("text") or ""):
+            text = note.get("text") or ""
+            found = notes_parse.parse_residence_note(text)
+            if not found and llm.enabled() and notes_parse.looks_like_residence(text):
+                found = llm.extract_residence_countries(text)
+            for c in found:
                 countries.append(Fact(c, note["note_id"], "residence_note"))
 
     # drop exact repeats (e.g. the same residence note read twice), keep order stable

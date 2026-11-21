@@ -41,6 +41,7 @@ def parse_date(s):
     t = str(s).strip().casefold().replace(",", " ").replace(".", " ").strip()
     t = re.sub(r"(\d)(st|nd|rd|th)\b", r"\1", t)
     t = re.sub(r"\s+", " ", t)
+    t = re.sub(r"^(\d{1,2}) of ", r"\1 ", t)          # "3rd of May 1990"
     m = re.fullmatch(r"(\d{4})(?:[-/](\d{1,2})(?:[-/](\d{1,2}))?)?(?:t[\d:]+z?)?", t)
     if m:
         y, mo, d = m.groups()

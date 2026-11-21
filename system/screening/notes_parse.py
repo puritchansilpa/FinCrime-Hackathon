@@ -232,3 +232,9 @@ def parse_residence_note(text: str) -> list:
     if not text or not (_YEAR.search(text) or _RESIDENCE_CUE.search(text)):
         return []
     return sorted({c for c, _, _ in fallbacks.find_countries(text)})
+
+
+def looks_like_residence(text: str) -> bool:
+    """A note that talks about living/working somewhere over some years (worth an LLM read
+    when no country was recognised)."""
+    return bool(text and _YEAR.search(text) and _RESIDENCE_CUE.search(text))

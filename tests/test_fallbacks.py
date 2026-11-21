@@ -17,7 +17,8 @@ class DateTests(unittest.TestCase):
         self.assertEqual(F.parse_date("19/12/1940"), PartialDate(1940, 12, 19))
         self.assertEqual(F.parse_date("17 June 1976"), PartialDate(1976, 6, 17))
         self.assertEqual(F.parse_date("June 17, 1976"), PartialDate(1976, 6, 17))
-        self.assertEqual(F.parse_date("17th of June 1976"), None)  # 'of' is not a date word
+        self.assertEqual(F.parse_date("17th of June 1976"), PartialDate(1976, 6, 17))
+        self.assertIsNone(F.parse_date("June of 1976 or so"))
         self.assertEqual(F.parse_date("February 1968"), PartialDate(1968, 2))
         self.assertEqual(F.parse_date("1976-06"), PartialDate(1976, 6))
         self.assertEqual(F.parse_date("1976"), PartialDate(1976))

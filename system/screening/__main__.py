@@ -11,7 +11,7 @@ import sys
 import time
 import traceback
 
-from . import customer, hit, policy
+from . import customer, hit, llm, policy
 from .load import load_data
 from .models import REVIEW, Decision, Resolution
 
@@ -39,6 +39,10 @@ def run(data_folder: str, output_path: str, use_llm: bool = False) -> dict:
     started = time.time()
     data = load_data(data_folder)
     data.use_llm = use_llm  # read by A7/B7 LLM pieces; off by default
+    llm.configure(use_llm)
+    if use_llm and not llm.enabled():
+        print("warning: --llm given but OPENROUTER_API_KEY is not set; running without the LLM",
+              file=sys.stderr)
 
     results = {}
     errors = 0
@@ -78,6 +82,9 @@ def run(data_folder: str, output_path: str, use_llm: bool = False) -> dict:
     stats = {"hits": len(results), "errors": errors, "seconds": round(time.time() - started, 1)}
     print(f"wrote {stats['hits']} hits to {output_path} in {stats['seconds']}s "
           f"({errors} errors)", file=sys.stderr)
+    if llm.enabled():
+        stats["llm"] = llm.stats()
+        print(f"LLM: {stats['llm']}", file=sys.stderr)
     return stats
 
 
