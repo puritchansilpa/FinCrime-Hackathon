@@ -88,6 +88,20 @@ class DateAndNameTests(unittest.TestCase):
         self.assertFalse(name_fits(None, ["Ana"]))
 
 
+class RecordFitsOrderTests(unittest.TestCase):
+    """The fuzzy name check is the expensive one: it runs only after the cheap checks pass."""
+
+    def test_name_is_not_compared_when_the_dob_already_rules_the_record_out(self):
+        from unittest import mock
+        from screening import customer
+        alert = {"customer_name": "ANA LOPEZ", "dob": "1980-01-01", "entity_type": "Individual"}
+        with mock.patch.object(customer, "name_fits", return_value=True) as names:
+            self.assertFalse(customer.record_fits(alert, cust("CUS-1", "ANA LOPEZ", "1981-01-01")))
+            names.assert_not_called()
+            self.assertTrue(customer.record_fits(alert, cust("CUS-2", "ANA LOPEZ", "1980-01-01")))
+            names.assert_called_once()
+
+
 class ResolveTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

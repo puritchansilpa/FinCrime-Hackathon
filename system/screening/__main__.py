@@ -1,4 +1,7 @@
-"""Entry point: python3 -m screening <data folder> <output file> [--llm]
+"""Entry point: python3 -m screening <data folder> <output file> [--no-llm]
+
+The LLM is used automatically when XAI_API_KEY is set (in the environment or in a .env
+file at the repo root), and the run works the same way without it. --no-llm turns it off.
 
 Decides every hit in the data folder and writes one JSON line per hit, sorted by hit_id.
 A hit that crashes the pipeline is written as REVIEW / INSUFFICIENT_DATA (never a
@@ -44,9 +47,9 @@ def run(data_folder: str, output_path: str, use_llm: bool = False) -> dict:
     data.use_llm = use_llm  # read by A7/B7 LLM pieces; off by default
     llm.configure(use_llm)
     templates.configure(data.notes.values())
-    if use_llm and not llm.enabled():
-        print("warning: --llm given but XAI_API_KEY is not set; running without the LLM",
-              file=sys.stderr)
+    print("LLM: on (xAI)" if llm.enabled() else
+          "LLM: off (" + ("--no-llm" if not use_llm else "XAI_API_KEY not set") + "); rules and regex only",
+          file=sys.stderr)
 
     results = {}
     queue = []
@@ -117,16 +120,35 @@ def run(data_folder: str, output_path: str, use_llm: bool = False) -> dict:
     return stats
 
 
+def _load_dotenv() -> None:
+    """Read XAI_* settings from a .env file at the repo root, if the environment lacks them."""
+    path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), ".env")
+    try:
+        with open(path, encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if line.startswith("export "):
+                    line = line[7:]
+                key, sep, value = line.partition("=")
+                key, value = key.strip(), value.strip().strip('"').strip("'")
+                if sep and key.startswith("XAI_") and value and not os.environ.get(key):
+                    os.environ[key] = value
+    except OSError:
+        pass
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(prog="system/run", description=__doc__.splitlines()[0])
     parser.add_argument("data_folder")
     parser.add_argument("output_file")
     parser.add_argument("--llm", action="store_true",
-                        help="enable the xAI LLM note fallbacks (needs XAI_API_KEY)")
+                        help="kept for compatibility: the LLM is on by default when XAI_API_KEY is set")
+    parser.add_argument("--no-llm", action="store_true", help="never call the LLM")
     args = parser.parse_args(argv)
     if not os.path.isdir(args.data_folder):
         parser.error(f"data folder not found: {args.data_folder}")
-    run(args.data_folder, args.output_file, use_llm=args.llm)
+    _load_dotenv()
+    run(args.data_folder, args.output_file, use_llm=not args.no_llm)
     return 0
 
 

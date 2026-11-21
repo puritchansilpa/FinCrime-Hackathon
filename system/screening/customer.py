@@ -93,12 +93,14 @@ def type_fits(alert, rec) -> bool:
 
 
 def record_fits(alert, rec) -> bool:
+    # A pure AND of independent checks, cheapest first: the fuzzy name comparison is by far
+    # the most expensive, so it only runs on records whose type, DOB, country and city fit.
     return (type_fits(alert, rec)
-            and name_fits(alert.get("customer_name"), [rec.get(f) for f in NAME_FIELDS],
-                          _is_company(alert.get("entity_type") or rec.get("entity_type")))
             and dob_fits(alert.get("dob"), rec.get("dob"))
             and country_fits(alert.get("country"), rec)
-            and city_fits(alert.get("city"), rec))
+            and city_fits(alert.get("city"), rec)
+            and name_fits(alert.get("customer_name"), [rec.get(f) for f in NAME_FIELDS],
+                          _is_company(alert.get("entity_type") or rec.get("entity_type"))))
 
 
 # --- following links ----------------------------------------------------------------

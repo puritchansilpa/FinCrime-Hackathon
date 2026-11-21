@@ -34,6 +34,7 @@ from . import fallbacks, normalize, notes_parse
 API_URL = "https://api.x.ai/v1/chat/completions"
 DEFAULT_MODEL = "grok-4.20-0309-non-reasoning"   # dated, non-reasoning: fast and stable for extraction
 SEED = 7
+MAX_FAILURES = 3   # after this many failed requests in a run, the LLM is skipped for the rest of it
 
 _state = {"requested": False, "cache": {}, "calls": 0, "failures": 0, "loaded_file": None}
 
@@ -41,8 +42,9 @@ _state = {"requested": False, "cache": {}, "calls": 0, "failures": 0, "loaded_fi
 # --- switch ----------------------------------------------------------------------------
 
 def configure(use_llm: bool) -> None:
-    """Called once per run from __main__ with the --llm flag."""
+    """Called once per run from __main__ (on unless --no-llm; it still needs XAI_API_KEY)."""
     _state["requested"] = bool(use_llm)
+    _state["failures"] = 0
     if enabled():
         _load_cache_file()
 
@@ -114,6 +116,8 @@ def chat_json(system: str, user: str, schema: dict, name: str = "answer"):
     """
     if not enabled():
         return None
+    if _state["failures"] >= MAX_FAILURES:
+        return None  # the API keeps failing: stop calling it, so the run stays fast (facts stay unknown)
     model = os.environ.get("XAI_MODEL") or DEFAULT_MODEL
     key = hashlib.sha256(json.dumps([model, system, user, schema], sort_keys=True)
                          .encode("utf-8")).hexdigest()
