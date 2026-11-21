@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Screening review</title>
+<style>
+:root{--bg:#F5F6F8;--surface:#FFFFFF;--line:#E3E6EB;--line2:#EEF0F3;--ink:#15181E;--ink2:#2C323C;--muted:#5B6270;
+--accent:#1E46B8;--accent-ink:#15318A;--accent-bg:#EEF2FC;--chip-bg:#F3F6FD;--chip-line:#C9D3EE;
+--rev-bg:#FFF3D1;--rev:#6B4300;--same-bg:#FDEBE3;--same:#962F0C;--clr-bg:#E6EDFB;--clr:#1A3F9E;
+--ok:#22603A;--ok-bg:#E9F5EC;--warn-bg:#FFF7F0;--warn-line:#F0C9A8;--warn:#7A3A12;--neutral-bg:#EEF0F3;--neutral:#3D4450;
+--mark-name:#FDEBE3;--mark-dob:#E3F1F3;--mark-country:#FFF3D1;--mark-provider:#EFEAF8;--mark-document:#E6EDFB}
+@media (prefers-color-scheme: dark){:root{--bg:#0F1115;--surface:#171A21;--line:#2A2F39;--line2:#22262E;--ink:#E8EAEE;--ink2:#D2D6DD;--muted:#9AA2AF;
+--accent:#8FB0FF;--accent-ink:#B8CCFF;--accent-bg:#1D2740;--chip-bg:#1B2233;--chip-line:#34436B;
+--rev-bg:#3A2E0E;--rev:#F5D88A;--same-bg:#3E2218;--same:#F7B59C;--clr-bg:#1A2747;--clr:#AFC4FF;
+--ok:#8FD3A6;--ok-bg:#16301F;--warn-bg:#2E2117;--warn-line:#6B4A2E;--warn:#F2C2A0;--neutral-bg:#252A33;--neutral:#C3C9D3;
+--mark-name:#4A2A20;--mark-dob:#1E3A3E;--mark-country:#3D3315;--mark-provider:#2E2742;--mark-document:#1E2B48}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;font-size:14px;line-height:1.45}
+a{color:var(--accent)}a:hover{color:var(--accent-ink)}
+.mono,.evid,.tag,.band,.chip{white-space:nowrap}
+.mono{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px}
+.muted{color:var(--muted)}
+.skip{position:absolute;left:-999px}.skip:focus{left:16px;top:8px;background:var(--surface);padding:8px;z-index:10}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+header.top{background:var(--surface);border-bottom:1px solid var(--line)}
+.wrap{max-width:1360px;margin:0 auto;padding:14px 24px}
+.toprow{display:flex;flex-wrap:wrap;align-items:center;gap:12px 24px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px;color:var(--ink);text-decoration:none}
+.grow{flex:1 1 auto}
+button,.btn{font:inherit;cursor:pointer}
+.btn{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 14px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);text-decoration:none}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.btn:disabled{opacity:.55;cursor:not-allowed}
+main{max-width:1360px;margin:0 auto;padding:24px}
+h1{margin:0;font-size:24px}h2{margin:0;font-size:18px}h3{margin:0;font-size:15px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.pad{padding:16px 20px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin:16px 0 24px}
+.stat .k{color:var(--muted);font-size:13px}.stat .v{font-size:28px;font-weight:700;margin-top:4px}
+.layout{display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start}
+aside.filters{flex:1 1 230px;max-width:100%;padding:16px}
+.content{flex:999 1 560px;min-width:0}
+.label{margin:18px 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600}
+.label:first-child{margin-top:0}
+.tabs{display:flex;flex-direction:column;gap:6px}
+.tab{display:flex;justify-content:space-between;align-items:center;min-height:44px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);text-align:left}
+.tab[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-bg);color:var(--accent-ink);font-weight:600}
+.check{display:flex;gap:8px;align-items:center;padding:3px 0}
+.check input{width:16px;height:16px}
+input[type=search],input[type=text],select,textarea{font:inherit;color:var(--ink);background:var(--surface);border:1px solid #CDD2DA;border-radius:8px}
+input[type=search],input[type=text],select{height:40px;padding:0 10px;width:100%}
+textarea{padding:10px;width:100%;resize:vertical}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%}
+th{text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);font-weight:600;background:var(--bg);padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:12px;border-bottom:1px solid var(--line2);vertical-align:top}
+tr.rowlink:hover td{background:var(--accent-bg)}
+.chip{display:inline-block;padding:2px 9px;border:1px solid var(--line);border-radius:999px;font-size:12px;color:var(--ink2);white-space:nowrap}
+.tag{display:inline-block;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:600;white-space:nowrap}
+.tag.REVIEW{background:var(--rev-bg);color:var(--rev)}.tag.SAME_ENTITY{background:var(--same-bg);color:var(--same)}.tag.DIFFERENT_ENTITY{background:var(--clr-bg);color:var(--clr)}
+.band{display:inline-block;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:600}
+.band.same{background:var(--same-bg);color:var(--same)}.band.diff{background:var(--clr-bg);color:var(--clr)}.band.neutral{background:var(--neutral-bg);color:var(--neutral)}
+.evid{display:inline-flex;align-items:center;padding:4px 8px;border:1px solid var(--chip-line);border-radius:6px;background:var(--chip-bg);color:var(--accent);margin:2px 4px 2px 0;min-height:32px}
+.evid:hover{border-color:var(--accent)}
+p .evid,.outcome .evid{min-height:0;padding:0 5px;margin:0 2px;font-size:12px}
+main:focus{outline:none}
+.grid2{display:flex;flex-wrap:wrap;gap:20px;align-items:stretch}
+.grid2>.card{flex:1 1 420px;min-width:0}
+dl.kv{margin:0;display:grid;grid-template-columns:minmax(120px,170px) minmax(0,1fr);gap:8px 16px}
+dl.kv dt{color:var(--muted)}dl.kv dd{margin:0}
+.state{display:inline-flex;align-items:center;gap:6px;font-weight:600;white-space:nowrap}
+.state.agree{color:var(--accent)}.state.contradict{color:var(--same)}.state.unknown,.state.neither{color:var(--muted)}
+.outcomes{display:flex;flex-direction:column;gap:10px}
+.outcome{display:flex;gap:12px;align-items:flex-start;padding:10px 12px;border:1px solid var(--line);border-radius:8px}
+.outcome .tag{flex:0 0 auto}
+.notice{padding:12px 14px;border-radius:8px;border:1px solid var(--warn-line);background:var(--warn-bg);color:var(--warn)}
+.okline{color:var(--ok);font-weight:600}
+fieldset{border:0;margin:0;padding:0}
+.choices{display:flex;flex-wrap:wrap;gap:10px}
+.choice{display:flex;align-items:center;gap:8px;min-height:44px;padding:0 14px;border:1px solid #CDD2DA;border-radius:8px;cursor:pointer}
+.field{display:flex;flex-direction:column;gap:6px;flex:1 1 260px}
+.row{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:flex-end}
+.stack{display:flex;flex-direction:column;gap:20px}
+details summary{cursor:pointer;color:var(--accent);font-weight:600}
+pre.notes{white-space:pre-wrap;font:inherit;margin:8px 0 0;max-height:320px;overflow:auto;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px}
+#drawer{position:fixed;inset:0;background:rgba(10,12,16,.45);display:flex;justify-content:flex-end;z-index:20}
+#drawer[hidden]{display:none}
+#drawer .panel{width:min(640px,100%);height:100%;overflow:auto;background:var(--surface);padding:20px 24px;box-shadow:-8px 0 24px rgba(0,0,0,.2)}
+.notetext{font-size:16px;line-height:1.9;padding:14px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+mark{color:var(--ink);padding:1px 4px;border-radius:4px}
+mark.name{background:var(--mark-name)}mark.dob{background:var(--mark-dob)}mark.country{background:var(--mark-country)}mark.provider{background:var(--mark-provider)}mark.document{background:var(--mark-document)}
+.legend{display:flex;flex-wrap:wrap;gap:10px;font-size:12px;color:var(--muted);margin-top:8px}
+.empty{padding:40px 20px;text-align:center;color:var(--muted)}
+@media (max-width:640px){main{padding:16px}.wrap{padding:12px 16px}dl.kv{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+  <div class="wrap toprow">
+    <a class="brand" href="#/">
+      <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4v5c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V7l8-4z"/><path d="M9 12l2 2 4-4"/></svg>
+      Screening review
+    </a>
+    <span class="muted" id="runline"></span>
+    <span class="grow"></span>
+    <button type="button" class="btn" id="export">Export analyst decisions (<span id="ndec">0</span>)</button>
+  </div>
+</header>
+<main id="main" tabindex="-1"></main>
+<div id="drawer" hidden>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
+    <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:12px">
+      <h2 id="drawer-title">Record</h2>
+      <button type="button" class="btn" id="drawer-close">Close</button>
+    </div>
+    <div id="drawer-body"></div>
+  </div>
+</div>
+<script id="data" type="application/json">/*__DATA__*/null</script>
+<script>
+"use strict";
+(function () {
+  var DATA = null;
+  try { DATA = JSON.parse(document.getElementById("data").textContent); } catch (e) { DATA = null; }
+  var main = document.getElementById("main");
+  if (!DATA) {
+    main.innerHTML = '<div class="card empty">No data in this page. Build it with <span class="mono">python3 tools/build_review_ui.py</span>.</div>';
+    return;
+  }
+
+  var LABEL = { REVIEW: "Review", SAME_ENTITY: "Same entity", DIFFERENT_ENTITY: "Cleared" };
+  var CODES = ["DOB_MISMATCH", "LOCATION_MISMATCH", "NAME_MISMATCH_VERIFIED", "TEMPORAL_IMPOSSIBILITY", "ENTITY_TYPE_MISMATCH", "DECEASED"];
+  var BAND_CLASS = { "leaning SAME": "same", "leaning DIFFERENT": "diff", "neutral": "neutral" };
+  var BAND_TEXT = { "leaning SAME": "Leaning same entity", "leaning DIFFERENT": "Leaning different", "neutral": "Even" };
+  var hits = DATA.hits, byId = {};
+  hits.forEach(function (h) { byId[h.id] = h; });
+  var S = { tab: "REVIEW", q: "", bands: {}, facts: {}, cats: {}, person: {} };
+  var STORE = "screening-review-decisions";
+  var decisions = readStore();
+
+  function readStore() { try { return JSON.parse(localStorage.getItem(STORE) || "{}") || {}; } catch (e) { return {}; } }
+  function writeStore() { try { localStorage.setItem(STORE, JSON.stringify(decisions)); } catch (e) {} updateDecCount(); }
+  function updateDecCount() { document.getElementById("ndec").textContent = String(Object.keys(decisions).length); }
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function tag(d) { return '<span class="tag ' + esc(d) + '">' + esc(LABEL[d] || d) + "</span>"; }
+  function band(b) { return b ? '<span class="band ' + (BAND_CLASS[b] || "neutral") + '">' + esc(BAND_TEXT[b] || b) + "</span>" : ""; }
+  function evid(id) { return '<button type="button" class="evid mono" data-record="' + esc(id) + '">' + esc(id) + "</button>"; }
+  var ID_RE = /\b(?:CUS|KYC|NOTE|SR|ACC|APP)-[0-9A-F]{6}\b/g;
+  function linkify(text) {
+    return esc(text).replace(ID_RE, function (id) { return DATA.records[id] ? evid(id) : '<span class="mono">' + id + "</span>"; });
+  }
+  function evids(ids) { return (ids && ids.length) ? ids.map(evid).join("") : '<span class="muted">–</span>'; }
+  function stateIcon(s) {
+    var p = { agree: '<path d="M5 12l5 5L19 7"/>', contradict: '<path d="M6 6l12 12M18 6L6 18"/>', unknown: '<path d="M6 12h12"/>', neither: '<circle cx="12" cy="12" r="7"/>' }[s] || "";
+    return '<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">' + p + "</svg>";
+  }
+  var STATE_LABEL = { agree: "Agree", contradict: "Contradicts", unknown: "Unknown", neither: "No contradiction" };
+
+  var m = DATA.meta, c = m.counts || {};
+  document.getElementById("runline").textContent = m.hits + " hits from " + m.data + " · built " + m.built;
+  updateDecCount();
+
+  // ---------------- queue ----------------
+  function facetValues(fn) { var o = {}; hits.forEach(function (h) { var v = fn(h); if (v) o[v] = (o[v] || 0) + 1; }); return o; }
+  var CATS = facetValues(function (h) { return h.hit.category || "Other"; });
+  var FACTS = facetValues(function (h) { return h.queue && h.queue.task ? h.queue.task.fact : null; });
+  var BANDS = facetValues(function (h) { return h.queue ? h.queue.band : null; });
+
+  function matches(h) {
+    if (S.tab !== "ALL" && h.decision !== S.tab) return false;
+    var on = function (o) { return Object.keys(o).filter(function (k) { return o[k]; }); };
+    var b = on(S.bands), f = on(S.facts), k = on(S.cats);
+    if (b.length && !(h.queue && b.indexOf(h.queue.band) >= 0)) return false;
+    if (f.length && !(h.queue && h.queue.task && f.indexOf(h.queue.task.fact) >= 0)) return false;
+    if (k.length && k.indexOf(h.hit.category || "Other") < 0) return false;
+    if (S.q) {
+      var q = S.q.toLowerCase();
+      var hay = [h.id, h.alert, h.hitName, h.screened.name, h.customerRecord].concat(h.persons.reduce(function (a, p) { return a.concat(p.records); }, [])).join(" ").toLowerCase();
+      if (hay.indexOf(q) < 0) return false;
+    }
+    return true;
+  }
+
+  function renderQueue() {
+    document.title = "Review queue · Screening review";
+    var list = hits.filter(matches);
+    list.sort(function (a, b) {
+      if (S.tab === "REVIEW") return (a.queue ? a.queue.rank : 1e9) - (b.queue ? b.queue.rank : 1e9);
+      return a.id < b.id ? -1 : 1;
+    });
+    var practice = m.practice ? (m.practice.right + " of " + m.practice.labels + " practice labels right, " + m.practice.unsafe + " unsafe clearances") : "";
+    var tabs = [["REVIEW", "Needs review", c.REVIEW || 0], ["SAME_ENTITY", "Same entity", c.SAME_ENTITY || 0], ["DIFFERENT_ENTITY", "Cleared", c.DIFFERENT_ENTITY || 0], ["ALL", "All hits", m.hits]];
+    var head = {
+      REVIEW: ["Review queue", "Ranked by the cost an analyst saves by settling one fact"],
+      SAME_ENTITY: ["Same entity", "Name and date of birth (companies: name and country) agree and nothing contradicts"],
+      DIFFERENT_ENTITY: ["Cleared", "Each cleared on a contradiction the policy names"],
+      ALL: ["All hits", "Every hit in this run"]
+    }[S.tab];
+    var checks = function (name, obj, state, disabled) {
+      return Object.keys(obj).sort().map(function (k) {
+        var id = name + "-" + k.replace(/\W+/g, "-");
+        return '<label class="check" for="' + id + '"><input type="checkbox" id="' + id + '" data-facet="' + name + '" value="' + esc(k) + '"' + (state[k] ? " checked" : "") + (disabled ? " disabled" : "") + "> " + esc(name === "bands" ? (BAND_TEXT[k] || k) : k) + ' <span class="muted">(' + obj[k] + ")</span></label>";
+      }).join("");
+    };
+    var rows = list.map(function (h, i) {
+      var q = h.queue, mine = decisions[h.id];
+      return '<tr class="rowlink"><td class="muted">' + (S.tab === "REVIEW" && q ? q.rank : i + 1) + "</td>" +
+        '<td class="mono">' + esc(h.alert) + "</td>" +
+        "<td><div><strong>" + esc(h.screened.name || "–") + '</strong> <span class="mono muted">' + esc(h.customerRecord || "no record") + "</span></div>" +
+        '<div>→ <a href="#/hit/' + esc(h.id) + '">' + esc(h.hitName) + '</a> <span class="mono muted">' + esc(h.id) + "</span></div></td>" +
+        '<td><span class="chip">' + esc(h.hit.category || "Other") + "</span></td>" +
+        "<td>" + tag(h.decision) + '<div class="mono muted" style="margin-top:4px">' + esc(h.code) + "</div>" + (mine ? '<div class="okline" style="margin-top:4px">Analyst: ' + esc(LABEL[mine.decision] || mine.decision) + "</div>" : "") + "</td>" +
+        "<td>" + (q ? band(q.band) : '<span class="muted">–</span>') + "</td>" +
+        "<td>" + (q && q.task ? esc(cap(q.task.fact)) : '<span class="muted">–</span>') + "</td>" +
+        "<td>" + (q ? esc(q.expected_cost_saved) : '<span class="muted">–</span>') + "</td></tr>";
+    }).join("");
+    main.innerHTML =
+      '<section aria-label="Run summary"><h1>Screening run</h1><p class="muted" style="margin:4px 0 0">' + esc(m.output) + " · " + m.alerts + " alerts" + (practice ? " · " + esc(practice) : "") + "</p></section>" +
+      '<section class="cards" aria-label="Totals">' +
+      stat("Hits screened", m.hits, "in " + m.alerts + " alerts") + stat("Needs review", c.REVIEW || 0, "ranked by what one fact would settle", "var(--rev)") +
+      stat("Same entity", c.SAME_ENTITY || 0, "go to compliance", "var(--same)") + stat("Cleared", c.DIFFERENT_ENTITY || 0, "each on a stated contradiction", "var(--clr)") + "</section>" +
+      '<div class="layout"><aside class="card filters" aria-label="Filters">' +
+      '<div class="label" id="lbl-dec">Decision</div><div class="tabs" role="group" aria-labelledby="lbl-dec">' +
+      tabs.map(function (t) { return '<button type="button" class="tab" data-tab="' + t[0] + '" aria-pressed="' + (S.tab === t[0]) + '"><span>' + esc(t[1]) + "</span><span>" + t[2] + "</span></button>"; }).join("") + "</div>" +
+      '<div class="label"><label for="q">Search</label></div><input id="q" type="search" placeholder="Hit, alert, name or record ID" value="' + esc(S.q) + '">' +
+      '<div class="label">Confidence band (review)</div>' + checks("bands", BANDS, S.bands, S.tab !== "REVIEW" && S.tab !== "ALL") +
+      '<div class="label">Would be settled by</div>' + checks("facts", FACTS, S.facts, S.tab !== "REVIEW" && S.tab !== "ALL") +
+      '<div class="label">Listing</div>' + checks("cats", CATS, S.cats, false) +
+      '<div style="margin-top:14px"><button type="button" class="btn" id="clear">Clear filters</button></div></aside>' +
+      '<section class="card content" aria-labelledby="qtitle"><div class="pad row" style="justify-content:space-between;border-bottom:1px solid var(--line)"><div><h2 id="qtitle">' + esc(head[0]) + '</h2><p class="muted" style="margin:2px 0 0">' + esc(head[1]) + '</p></div><span class="muted" aria-live="polite">' + list.length + " shown</span></div>" +
+      (list.length ? '<div class="scroll"><table><caption class="sr">' + esc(head[0]) + "</caption><thead><tr><th>#</th><th>Alert</th><th>Customer → watchlist hit</th><th>Listing</th><th>Decision</th><th>Band</th><th>Would be settled by</th><th>Saves</th></tr></thead><tbody>" + rows + "</tbody></table></div>"
+        : '<div class="empty">No hits match these filters.</div>') + "</section></div>";
+
+    main.querySelectorAll("[data-tab]").forEach(function (b) { b.addEventListener("click", function () { S.tab = b.getAttribute("data-tab"); renderQueue(); }); });
+    main.querySelectorAll("[data-facet]").forEach(function (cb) {
+      cb.addEventListener("change", function () { S[cb.getAttribute("data-facet")][cb.value] = cb.checked; renderQueue(); var again = document.getElementById(cb.id); if (again) again.focus(); });
+    });
+    var q = document.getElementById("q");
+    q.addEventListener("input", function () { S.q = q.value.trim(); var pos = q.selectionStart; renderQueue(); var n = document.getElementById("q"); n.focus(); n.setSelectionRange(pos, pos); });
+    document.getElementById("clear").addEventListener("click", function () { S.q = ""; S.bands = {}; S.facts = {}; S.cats = {}; renderQueue(); });
+  }
+  function stat(k, v, sub, color) { return '<div class="card pad stat"><div class="k"' + (color ? ' style="color:' + color + ';font-weight:600"' : "") + ">" + esc(k) + '</div><div class="v">' + esc(v) + '</div><div class="muted" style="font-size:13px">' + esc(sub) + "</div></div>"; }
+  function cap(s) { s = String(s || ""); return s.charAt(0).toUpperCase() + s.slice(1); }
+
+  // ---------------- hit ----------------
+  function renderHit(id) {
+    var h = byId[id];
+    if (!h) { main.innerHTML = '<div class="card empty">No hit ' + esc(id) + '. <a href="#/">Back to the queue</a></div>'; return; }
+    document.title = h.hitName + " · Screening review";
+    var q = h.queue, pi = S.person[id] || 0, persons = h.persons, person = persons[pi], facts = h.facts[pi] || [];
+    var parts = [];
+    parts.push('<div class="row" style="align-items:center"><a href="#/" class="btn">← Queue</a><span class="mono muted">' + esc(h.alert) + " / " + esc(h.id) + "</span>" + (q ? '<span class="muted">Rank ' + q.rank + " of " + (DATA.meta.queueRows || "") + " in the review queue</span>" : "") + "</div>");
+    parts.push('<div class="row" style="align-items:center;margin-top:8px"><h1>' + esc(h.screened.name || "Unknown customer") + ' <span class="muted" style="font-weight:400">→</span> ' + esc(h.hitName) + '</h1><span class="chip">' + esc(h.hit.category || "Other") + "</span>" + tag(h.decision) + '<span class="mono muted">' + esc(h.code) + "</span></div>");
+
+    // decision + why
+    var why = '<section class="card pad" aria-labelledby="why"><div class="label" id="why" style="margin-top:0">Why the system decided this</div><p style="margin:0;font-size:16px;line-height:1.55">' + linkify(h.reason) + "</p>" +
+      '<div class="row" style="margin-top:12px;align-items:center"><span class="muted">Evidence</span><span>' + evids(h.evidence) + '</span><span class="grow"></span><span class="muted">Customer record: <span class="mono">' + esc(h.customerRecord || "none found") + "</span></span></div></section>";
+
+    var side = "";
+    if (q) {
+      side = '<section class="card pad" aria-labelledby="bandh"><div class="label" id="bandh" style="margin-top:0">Confidence band</div>' +
+        '<div class="row" style="align-items:center">' + band(q.band) + "</div>" +
+        '<p style="margin:10px 0 0">' + linkify(q.band_reason) + "</p>" +
+        '<div class="row" style="margin-top:10px;gap:8px">' + (q.agrees || []).map(function (a) { return '<span class="chip">Agrees: ' + esc(a) + "</span>"; }).join("") + (q.contradicts || []).map(function (a) { return '<span class="chip">Contradicts: ' + esc(a) + "</span>"; }).join("") + "</div>" +
+        '<p class="muted" style="margin:10px 0 0;font-size:13px">A band is a lean, not a decision: the policy confirms only on agreement and clears only on a contradiction.</p></section>' +
+        evidenceRequired(h, q);
+    } else {
+      side = decisive(h, facts);
+    }
+    parts.push('<div class="grid2" style="margin-top:16px;align-items:flex-start">' + why.replace('class="card pad"', 'class="card pad" style="flex:3 1 520px"') + '<div class="stack" style="flex:2 1 400px;min-width:0">' + side + "</div></div>");
+
+    // facts
+    var picker = "";
+    if (persons.length > 1) {
+      picker = '<div class="row" style="align-items:center;margin-top:8px"><label for="person">Compare with</label><select id="person" style="width:auto;min-width:260px">' +
+        persons.map(function (p, i) { return '<option value="' + i + '"' + (i === pi ? " selected" : "") + ">Person " + (i + 1) + ": " + esc(p.records.join(", ")) + "</option>"; }).join("") + "</select><span class=\"muted\">" + persons.length + " different people fit this alert</span></div>";
+    }
+    parts.push('<section class="card" style="margin-top:20px" aria-labelledby="fbf"><div class="pad" style="border-bottom:1px solid var(--line)"><h2 id="fbf">Fact by fact</h2><p class="muted" style="margin:2px 0 0">Clear only on a contradiction, confirm only on agreement (POLICY.md principles 6 and 7)</p>' + picker + "</div>" +
+      (facts.length ? '<div class="scroll"><table><thead><tr><th>Fact</th><th>Customer</th><th>Watchlist hit</th><th>Result</th><th>Evidence</th></tr></thead><tbody>' +
+        facts.map(function (f) { return "<tr><td><strong>" + esc(f.fact) + "</strong></td><td>" + esc(f.customer) + "</td><td>" + esc(f.hit) + '</td><td><span class="state ' + f.state + '">' + stateIcon(f.state) + esc(STATE_LABEL[f.state] || f.state) + '</span><div class="muted" style="font-size:13px;margin-top:2px">' + esc(f.detail) + "</div></td><td>" + evids(f.evidence) + "</td></tr>"; }).join("") + "</tbody></table></div>"
+        : '<div class="empty">No customer record was found for this alert, so there is nothing to compare. The hit stays for review.</div>') + "</section>");
+
+    // both sides
+    parts.push('<div class="grid2" style="margin-top:20px">' + customerCard(h, person) + hitCard(h) + "</div>");
+    // search
+    if (h.search.length) {
+      parts.push('<section class="card" style="margin-top:20px" aria-labelledby="srh"><div class="pad" style="border-bottom:1px solid var(--line)"><h2 id="srh">Search results for this name</h2><p class="muted" style="margin:2px 0 0">A result is about this hit only if it describes ' + esc(h.hit.phrase) + " in a country tied to the hit. Most are namesakes.</p></div>" +
+        '<div class="scroll"><table><thead><tr><th>Result</th><th>Snippet</th><th>Countries</th><th>Used?</th></tr></thead><tbody>' +
+        h.search.map(function (r) { return "<tr><td>" + evid(r.id) + "</td><td>" + esc(r.snippet) + "</td><td>" + esc((r.countries || []).join(", ") || "–") + '</td><td class="' + (r.used ? "okline" : "muted") + '">' + esc(r.verdict) + "</td></tr>"; }).join("") + "</tbody></table></div></section>");
+    }
+    parts.push(analystForm(h));
+    main.innerHTML = parts.join("");
+
+    var sel = document.getElementById("person");
+    if (sel) sel.addEventListener("change", function () { S.person[id] = parseInt(sel.value, 10) || 0; renderHit(id); var n = document.getElementById("person"); if (n) n.focus(); });
+    wireForm(h);
+    main.focus();
+  }
+
+  function evidenceRequired(h, q) {
+    var t = q.task;
+    if (!t) return "";
+    var groups = { SAME_ENTITY: [], DIFFERENT_ENTITY: [], REVIEW: [] };
+    (t.outcomes || []).forEach(function (o) { (groups[o.decision] || groups.REVIEW).push(o); });
+    var block = function (dec, title) {
+      var g = groups[dec];
+      if (!g.length) return "";
+      return '<div class="outcome">' + tag(dec) + "<div><strong>" + esc(title) + "</strong>" + g.map(function (o) { return '<div>' + linkify(cap(o.when)) + (o.reason_code ? ' <span class="mono muted">' + esc(o.reason_code) + "</span>" : "") + "</div>"; }).join("") + "</div></div>";
+    };
+    var none = !groups.SAME_ENTITY.length ? '<p class="muted" style="margin:0">No single value of this fact would confirm a match: confirming needs more than one fact.</p>' : "";
+    return '<section class="card pad" aria-labelledby="erq"><div class="label" id="erq" style="margin-top:0">Evidence required</div>' +
+      '<p style="margin:0 0 4px;font-size:16px;font-weight:600">' + esc(cap(t.fact)) + ' <span class="muted" style="font-weight:400;font-size:14px">(' + esc(t.kind) + ", " + esc(t.side) + " side)</span></p>" +
+      '<p class="muted" style="margin:0 0 12px">Where to look: ' + linkify(t.where) + "</p>" +
+      '<div class="outcomes">' + block("SAME_ENTITY", "Confirm as the same entity when") + none + block("DIFFERENT_ENTITY", "Clear as a different person when") + block("REVIEW", "Still needs review when") + "</div>" +
+      '<p class="muted" style="margin:12px 0 0">Expected saving: <strong style="color:var(--ink)">' + esc(q.expected_cost_saved) + "</strong> cost points</p></section>";
+  }
+
+  function decisive(h, facts) {
+    var key = facts.filter(function (f) { return h.decision === "DIFFERENT_ENTITY" ? f.state === "contradict" : f.state === "agree"; });
+    return '<section class="card pad" aria-labelledby="dech"><div class="label" id="dech" style="margin-top:0">' + (h.decision === "DIFFERENT_ENTITY" ? "Contradictions that cleared it" : "Facts that agree") + "</div>" +
+      (key.length ? key.map(function (f) { return '<div style="padding:6px 0;border-bottom:1px solid var(--line2)"><span class="state ' + f.state + '">' + stateIcon(f.state) + esc(f.fact) + '</span><div class="muted" style="font-size:13px">' + esc(f.detail) + "</div></div>"; }).join("")
+        : '<p class="muted" style="margin:0">See the fact-by-fact table.</p>') +
+      '<p class="muted" style="margin:10px 0 0;font-size:13px">' + (h.decision === "DIFFERENT_ENTITY" ? "A hit is cleared only on a contradiction the policy names." : "Confirmed only because these agree and nothing contradicts them.") + "</p></section>";
+  }
+
+  function factLine(f) { return f ? esc(f.value) + " " + evid(f.source) : '<span class="muted">Not known</span>'; }
+  function customerCard(h, p) {
+    if (!p) return '<section class="card pad"><h2>Customer</h2><p class="muted">No customer record fits this alert.</p><dl class="kv"><dt>Screened as</dt><dd>' + esc(h.screened.name) + "</dd></dl></section>";
+    var countries = p.countries.map(function (f) { return esc(f.value) + ' <span class="muted">(' + esc(f.origin.replace(/_/g, " ")) + ")</span> " + evid(f.source); }).join("<br>");
+    var names = dedupe(p.declaredNames).map(function (f) { return esc(f.value) + " " + evid(f.source); }).join("<br>");
+    return '<section class="card pad" aria-labelledby="custh"><h2 id="custh">Customer</h2>' +
+      (h.path.length ? '<p class="muted" style="margin:4px 0 12px">How it was found: ' + linkify(h.path.join(" → ")) + "</p>" : "") +
+      '<dl class="kv"><dt>Screened as</dt><dd>' + esc(h.screened.name) + (h.screened.dob ? " · " + esc(h.screened.dob) : "") + "</dd>" +
+      "<dt>Records</dt><dd>" + evids(p.records) + "</dd>" +
+      "<dt>Verified name</dt><dd>" + factLine(p.verifiedName) + "</dd>" +
+      "<dt>Verified date of birth</dt><dd>" + factLine(p.verifiedDob) + "</dd>" +
+      "<dt>Names on record</dt><dd>" + (names || "–") + "</dd>" +
+      "<dt>Countries</dt><dd>" + (countries || "–") + "</dd>" +
+      (p.unresolved.length ? '<dt>Places not tied to a country</dt><dd>' + esc(p.unresolved.join("; ")) + "</dd>" : "") +
+      "</dl></section>";
+  }
+  function dedupe(list) { var seen = {}; return list.filter(function (f) { var k = f.value + "|" + f.source; if (seen[k]) return false; seen[k] = 1; return true; }); }
+  function hitCard(h) {
+    var x = h.hit;
+    var names = x.names.map(function (n) { return esc(n.value) + (n.origin === "alias" ? ' <span class="muted">(alias)</span>' : ""); }).join("<br>");
+    var dobs = x.dobs.length ? x.dobs.map(function (d) { return esc(d.value) + ' <span class="muted">(' + esc(d.origin) + ")</span>" + (d.source && d.source.indexOf("SR-") === 0 ? " " + evid(d.source) : ""); }).join("<br>") : '<span class="muted">Not given</span>';
+    return '<section class="card pad" aria-labelledby="hith"><h2 id="hith">Watchlist hit</h2><p class="muted" style="margin:4px 0 12px"><span class="mono">' + esc(h.id) + "</span> · " + esc(x.type || "") + " · " + esc(x.phrase) + "</p>" +
+      '<dl class="kv"><dt>Names</dt><dd>' + names + "</dd><dt>Date of birth</dt><dd>" + dobs + "</dd>" +
+      "<dt>Countries</dt><dd>" + (esc(x.countries.join(", ")) || "–") + "</dd>" +
+      (x.unresolved.length ? "<dt>Places not tied to a country</dt><dd>" + esc(x.unresolved.join("; ")) + "</dd>" : "") +
+      "<dt>Earliest dated report</dt><dd>" + esc(x.earliestReport || "None") + "</dd><dt>Date of death</dt><dd>" + esc(x.death || "None given") + "</dd>" +
+      (x.position ? "<dt>Position or allegation</dt><dd>" + esc(x.position) + "</dd>" : "") +
+      (x.sources.length ? "<dt>Sources</dt><dd>" + x.sources.map(function (u, i) { return '<a href="' + esc(u) + '" target="_blank" rel="noopener noreferrer">Source ' + (i + 1) + "</a>"; }).join(" · ") + "</dd>" : "") +
+      "</dl>" + (x.notesExcerpt ? '<details style="margin-top:12px"><summary>Profile notes</summary><pre class="notes">' + esc(x.notesExcerpt) + (x.notesTruncated ? "\n…" : "") + "</pre></details>" : "") + "</section>";
+  }
+
+  // ---------------- analyst decision ----------------
+  function analystForm(h) {
+    var mine = decisions[h.id], t = h.queue && h.queue.task;
+    return '<section class="card pad" style="margin-top:20px" aria-labelledby="adh"><h2 id="adh">Your decision</h2>' +
+      (mine ? '<p class="okline" style="margin:6px 0 0">Saved ' + esc(mine.at) + ": " + esc(LABEL[mine.decision] || mine.decision) + (mine.code ? " · " + esc(mine.code) : "") + "</p>" : "") +
+      '<form id="af" novalidate style="margin-top:12px"><fieldset><legend class="sr">Decision</legend><div class="choices">' +
+      [["SAME_ENTITY", "Confirm same entity"], ["DIFFERENT_ENTITY", "Clear as a different person"], ["REVIEW", "Keep in review"]].map(function (o) {
+        return '<label class="choice"><input type="radio" name="dec" value="' + o[0] + '"' + ((mine ? mine.decision : null) === o[0] ? " checked" : "") + "> " + esc(o[1]) + "</label>";
+      }).join("") + "</div></fieldset>" +
+      '<div id="need-same" class="notice" style="margin-top:14px" hidden><div class="row">' +
+      '<div class="field"><label for="f-fact">' + esc(t ? cap(t.fact) : "Fact that confirms it") + " (required)</label>" +
+      (t && t.fact === "which customer record" && h.persons.length > 1
+        ? '<select id="f-fact"><option value="">Choose the screened customer…</option>' + h.persons.map(function (p) { var v = p.records.join(", "); return '<option value="' + esc(v) + '">' + esc(v) + "</option>"; }).join("") + "</select>"
+        : '<input id="f-fact" type="text" placeholder="' + esc(t && /date of birth/.test(t.fact) ? "e.g. 1979-06-14" : "The value you found") + '">') + "</div>" +
+      '<div class="field"><label for="f-src">Where you found it (required)</label><input id="f-src" type="text" placeholder="A source URL or record ID"></div></div>' +
+      '<p style="margin:8px 0 0">Confirm only when name and date of birth (companies: name and country) agree and nothing contradicts them.</p></div>' +
+      '<div id="need-clear" class="notice" style="margin-top:14px" hidden><div class="row">' +
+      '<div class="field"><label for="f-code">Contradiction that clears it (required)</label><select id="f-code"><option value="">Choose one…</option>' + CODES.map(function (cd) { return '<option value="' + cd + '">' + cd + "</option>"; }).join("") + "</select></div>" +
+      '<div class="field"><label for="f-src2">Record it rests on (required)</label><input id="f-src2" type="text" placeholder="A source URL or record ID"></div></div>' +
+      '<p style="margin:8px 0 0">A hit is cleared only on a contradiction. Clearing a real match is the costliest mistake.</p></div>' +
+      '<div class="field" style="margin-top:14px"><label for="f-note">Note for the audit trail<span id="note-req"></span></label><textarea id="f-note" rows="3" placeholder="What you checked and what you found">' + esc(mine ? mine.note || "" : "") + "</textarea></div>" +
+      '<div class="row" style="margin-top:14px;align-items:center"><button type="submit" class="btn primary" id="f-save">Record decision</button><a href="#/">Back to queue</a><span id="f-msg" class="muted" role="status"></span></div></form></section>';
+  }
+  function wireForm(h) {
+    var form = document.getElementById("af"); if (!form) return;
+    var msg = document.getElementById("f-msg");
+    var val = function (id) { var el = document.getElementById(id); return el ? el.value.trim() : ""; };
+    var choice = function () { var r = form.querySelector('input[name="dec"]:checked'); return r ? r.value : null; };
+    function refresh() {
+      var d = choice();
+      document.getElementById("need-same").hidden = d !== "SAME_ENTITY" || h.decision === "SAME_ENTITY";
+      document.getElementById("need-clear").hidden = d !== "DIFFERENT_ENTITY";
+      document.getElementById("note-req").textContent = d === "REVIEW" ? " (required)" : "";
+      var missing = "";
+      if (!d) missing = "Choose a decision.";
+      else if (d === "DIFFERENT_ENTITY" && (!val("f-code") || !val("f-src2"))) missing = "Choose the contradiction and the record it rests on before clearing.";
+      else if (d === "SAME_ENTITY" && h.decision !== "SAME_ENTITY" && (!val("f-fact") || !val("f-src"))) missing = "Record the fact that confirms it and where you found it.";
+      else if (d === "REVIEW" && !val("f-note")) missing = "Say what is still missing.";
+      document.getElementById("f-save").disabled = !!missing;
+      msg.textContent = missing;
+      return missing;
+    }
+    form.addEventListener("change", refresh); form.addEventListener("input", refresh);
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      if (refresh()) return;
+      var d = choice();
+      decisions[h.id] = {
+        hit_id: h.id, alert_id: h.alert, system_decision: h.decision, system_reason_code: h.code,
+        decision: d, code: d === "DIFFERENT_ENTITY" ? val("f-code") : null,
+        fact: d === "SAME_ENTITY" ? (h.queue && h.queue.task ? h.queue.task.fact : null) : null,
+        value: d === "SAME_ENTITY" ? val("f-fact") : null,
+        source: d === "DIFFERENT_ENTITY" ? val("f-src2") : (d === "SAME_ENTITY" ? val("f-src") : null),
+        note: val("f-note"), at: new Date().toISOString().slice(0, 16).replace("T", " ")
+      };
+      writeStore();
+      renderHit(h.id);
+      var m2 = document.getElementById("f-msg"); if (m2) { m2.className = "okline"; m2.textContent = "Recorded."; }
+    });
+    refresh();
+  }
+
+  document.getElementById("export").addEventListener("click", function () {
+    var lines = Object.keys(decisions).sort().map(function (k) { return JSON.stringify(decisions[k]); }).join("\n");
+    var blob = new Blob([lines ? lines + "\n" : ""], { type: "application/x-ndjson" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = "analyst_decisions.jsonl";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+  });
+
+  // ---------------- evidence drawer ----------------
+  var drawer = document.getElementById("drawer"), lastFocus = null;
+  function highlight(text, marks) {
+    var out = esc(text);
+    (marks || []).slice().sort(function (a, b) { return b.text.length - a.text.length; }).forEach(function (mk) {
+      var t = esc(mk.text); if (!t) return;
+      var i = out.toLowerCase().indexOf(t.toLowerCase());
+      if (i >= 0 && out.lastIndexOf("<mark", i) <= out.lastIndexOf("</mark>", i)) {
+        out = out.slice(0, i) + '<mark class="' + esc(mk.role) + '">' + out.slice(i, i + t.length) + "</mark>" + out.slice(i + t.length);
+      }
+    });
+    return out;
+  }
+  function fieldsTable(f) { return '<dl class="kv">' + Object.keys(f).map(function (k) { return "<dt>" + esc(k.replace(/_/g, " ")) + "</dt><dd>" + esc(f[k]) + "</dd>"; }).join("") + "</dl>"; }
+  function openRecord(id, opener) {
+    var r = DATA.records[id], body = document.getElementById("drawer-body");
+    document.getElementById("drawer-title").textContent = id;
+    if (!r) body.innerHTML = '<p class="muted">This record is not embedded in the page.</p>';
+    else if (r.kind === "note") {
+      var read = Object.keys(r.read).filter(function (k) { var v = r.read[k]; return v != null && !(Array.isArray(v) && !v.length); });
+      body.innerHTML = '<p class="muted" style="margin:0 0 10px">' + esc(r.channel) + " note · " + esc(r.date) + "</p>" +
+        '<div class="notetext">' + highlight(r.text, r.marks) + "</div>" +
+        '<div class="legend"><span><mark class="name">name</mark></span><span><mark class="dob">date of birth</mark></span><span><mark class="country">country</mark></span><span><mark class="provider">provider</mark></span><span><mark class="document">document</mark></span></div>' +
+        '<h3 style="margin:18px 0 8px">What the system read</h3>' + (read.length ? fieldsTable(read.reduce(function (o, k) { o[k] = Array.isArray(r.read[k]) ? r.read[k].join(", ") : r.read[k]; return o; }, {})) : '<p class="muted">Nothing: this note gives no identity or residence facts.</p>') +
+        '<p class="muted" style="margin-top:12px;font-size:13px">Read by pattern first; a note the patterns cannot read goes to the template learner, and only then (with --llm) to the model. Every value must appear in the note or it is dropped.</p>';
+    } else {
+      var title = { customer: "Customer record (system of record)", kyc: "Identity check (KYC provider)", search: "Web search result" }[r.kind] || r.kind;
+      body.innerHTML = '<p class="muted" style="margin:0 0 10px">' + esc(title) + "</p>" + fieldsTable(r.fields);
+    }
+    lastFocus = opener || document.activeElement;
+    drawer.hidden = false;
+    document.getElementById("drawer-close").focus();
+  }
+  function closeDrawer() { drawer.hidden = true; if (lastFocus && lastFocus.focus) lastFocus.focus(); }
+  document.getElementById("drawer-close").addEventListener("click", closeDrawer);
+  drawer.addEventListener("click", function (e) { if (e.target === drawer) closeDrawer(); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !drawer.hidden) closeDrawer(); });
+  main.addEventListener("click", function (e) {
+    var b = e.target.closest ? e.target.closest("[data-record]") : null;
+    if (b) openRecord(b.getAttribute("data-record"), b);
+  });
+
+  // ---------------- routing ----------------
+  function route() {
+    var mm = /^#\/hit\/([^/?#]+)/.exec(location.hash || "");
+    if (mm) renderHit(decodeURIComponent(mm[1])); else renderQueue();
+    window.scrollTo(0, 0);
+  }
+  window.addEventListener("hashchange", route);
+  route();
+})();
+</script>
+</body>
+</html>

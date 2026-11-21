@@ -5,6 +5,9 @@
 # Pasted copy of the data room kit; its files now live at the repo root (dev/, validate.py, …)
 /screening/
 
+# Generated review app (embeds the event's data): local only, never commit
+/build/
+
 # Browse workbooks (read-only views of dev/)
 *.xlsx
 # Office lock files
