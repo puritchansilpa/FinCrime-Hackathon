@@ -44,7 +44,7 @@ def run(data_folder: str, output_path: str, use_llm: bool = False) -> dict:
     data.use_llm = use_llm  # read by A7/B7 LLM pieces; off by default
     llm.configure(use_llm)
     if use_llm and not llm.enabled():
-        print("warning: --llm given but OPENROUTER_API_KEY is not set; running without the LLM",
+        print("warning: --llm given but XAI_API_KEY is not set; running without the LLM",
               file=sys.stderr)
 
     results = {}
@@ -118,7 +118,7 @@ def main(argv=None) -> int:
     parser.add_argument("data_folder")
     parser.add_argument("output_file")
     parser.add_argument("--llm", action="store_true",
-                        help="enable the OpenRouter LLM fallbacks (needs OPENROUTER_API_KEY)")
+                        help="enable the xAI LLM note fallbacks (needs XAI_API_KEY)")
     args = parser.parse_args(argv)
     if not os.path.isdir(args.data_folder):
         parser.error(f"data folder not found: {args.data_folder}")

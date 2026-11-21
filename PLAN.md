@@ -15,7 +15,7 @@ A bank's name screening raises **alerts**. Each alert has one or more **hits**, 
 **Deliverable:**
 - `system/run <data folder> <output file>`.
 - **Python 3 standard library only** (Node or shell are also allowed).
-- LLM calls allowed **only through OpenRouter**, with the key in `OPENROUTER_API_KEY`.
+- LLM calls: the brief names OpenRouter, but the event provides an **xAI** key and the organisers confirmed they score with xAI, so the system uses xAI only (`XAI_API_KEY`).
 - **Under 30 minutes per run.**
 - `output/dev.jsonl`.
 - `system/README.md`.
@@ -154,7 +154,7 @@ system/screening/
   hit.py         [B] HitProfile: names/aliases, type, DOB candidates + source, earliest dated report, death date, countries
   policy.py      [B] decide(person, hit) → Decision; combine() across several persons
   explain.py     [B] templated 2–4 sentence reason using this hit's own facts
-  llm.py         [A] (off by default) OpenRouter client via urllib + note-extraction fallback
+  llm.py         [A] (off by default) xAI client via urllib + note-extraction fallback
   __main__.py    [A] run all hits in sorted order, write JSONL
 tools/score.py   [A] own scorer: cost matrix, decision score, reason-field checks, per-hit diff with label `path`
 tests/           [A] test_load, test_customer, test_notes · [B] test_normalize, test_names, test_hit, test_policy
@@ -349,7 +349,7 @@ class Decision:               # [built by B]
    - Every value is a `Fact` with its source ID.
    - **Done when** our `customer_record_id` matches the label's `customer_record_ids` (or `AMBIGUOUS`) for 50 of 50.
 7. **A7. LLM client and note fallback (behind `--llm`):**
-   - OpenRouter client in `llm.py`, using urllib, temperature 0, a pinned model and provider, a JSON schema, and a timeout.
+   - xAI client in `llm.py` (`grok-4.20-0309-non-reasoning`), using urllib, temperature 0, a fixed seed, a JSON schema, and a timeout.
    - Fallback for kyc and residence notes the regex can't parse. Check that the returned values appear in the text.
 8. **A8. Final checks and submission:**
    - 5 runs give byte-identical output, and timing is recorded.
@@ -426,7 +426,7 @@ class Decision:               # [built by B]
   - overlapping variant groups (`joseph` is in two groups)
   - whether a verified name can come from a kyc note (the SOP says yes for approved checks recorded in notes)
 - **The unseen set may differ in shape** (arrays or `; `-joined strings, nested or flat alert details). The loader and `split_list` / `screened_details` accept both.
-- **Still missing:** an OpenRouter key, needed only if we try the optional LLM layer.
+- **LLM key:** xAI key in the gitignored `.env` (load with `set -a; . ./.env; set +a`). The LLM stays opt-in (`--llm`) until the test bench shows it helps.
 
 ## 8. Verification (the official pipeline)
 

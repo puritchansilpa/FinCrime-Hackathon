@@ -14,7 +14,7 @@ room lives in `screening/`, which is git-ignored).
 
 - Python 3 standard library only. No packages to install.
 - Reads only the given folder and writes one JSON line per hit, sorted by `hit_id`.
-- The LLM is **off** unless you pass `--llm` and set `OPENROUTER_API_KEY`.
+- The LLM is **off** unless you pass `--llm` and set `XAI_API_KEY` (the event provides an xAI key; the organisers score with xAI).
 - A dev run (819 hits, 72k customers) takes about 20 seconds; the limit is 30 minutes.
 
 ## Architecture
@@ -36,7 +36,7 @@ alerts ─► load ─► resolve(alert) ─────────────
 | `customer.py` | A | Alert → customer records → persons → `Person` with sourced facts. |
 | `notes_parse.py` | A | Reads identity checks and residence history out of free-text notes. |
 | `fallbacks.py` | A | A's stand-ins for dates, countries and name matching, written to the SOP; used only where B's functions return nothing. |
-| `llm.py` | A | Optional OpenRouter client; only reads notes the regex could not. |
+| `llm.py` | A | Optional xAI LLM client; only reads notes the regex could not. |
 | `__main__.py` | A | Runs every hit and writes the output. A hit that crashes becomes `REVIEW`, never a clearance. |
 | `normalize.py`, `names.py`, `hit.py`, `policy.py`, `explain.py` | B | Hit facts, the SOP rules, reasons and evidence. |
 | `models.py` | A+B | The shared contract (`Person`, `HitProfile`, `Decision`, `Fact`, ...). |
@@ -163,8 +163,8 @@ else is dropped as unknown. On dev the regex reads every note, so the LLM is not
 
 | Setting | Default |
 |---|---|
-| `OPENROUTER_MODEL` | `anthropic/claude-haiku-4.5` (check the slug on OpenRouter and pin it) |
-| `OPENROUTER_PROVIDER` | `anthropic`, with fallbacks off |
+| `XAI_API_KEY` | required to enable the LLM (`https://api.x.ai/v1/chat/completions`); the key alone authenticates |
+| `XAI_MODEL` | `grok-4.20-0309-non-reasoning` (dated, pinned, non-reasoning: fast and stable for extraction) |
 | `LLM_TIMEOUT` | 30 seconds per request, 3 attempts |
 | `LLM_CACHE_FILE` | unset; set it to keep answers on disk across runs |
 

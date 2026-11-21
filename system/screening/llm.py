@@ -1,23 +1,24 @@
-"""[Workstream A] OpenRouter LLM client and note-extraction fallback (task A7).
+"""[Workstream A] xAI LLM client and note-extraction fallback (task A7).
 
-Off by default. It is used only when the run is started with --llm AND the
-OPENROUTER_API_KEY environment variable is set. Python standard library only (urllib).
+Off by default. It is used only when the run is started with --llm AND the XAI_API_KEY
+environment variable is set. The event provides an xAI key and the organisers confirmed
+they score with xAI. Python standard library only (urllib); no account login is needed,
+the key alone authenticates.
 
 The LLM never decides anything. It only reads a note the regex parser could not read,
 and every value it returns is checked against the note text in code: a name, date or
 country that does not appear in the text is dropped (unknown), never trusted.
 
-Determinism: temperature 0, a fixed seed, a pinned model and provider (no fallbacks),
-a JSON schema for the answer, and an in-memory cache so the same note always gives the
-same answer within a run. Set LLM_CACHE_FILE to also keep answers on disk across runs.
-Any error (network, timeout, bad JSON) means "unknown", which leans towards REVIEW.
+Determinism: temperature 0, a fixed seed, a pinned dated model, a JSON schema for the
+answer, and an in-memory cache so the same note always gives the same answer within a
+run. Set LLM_CACHE_FILE to also keep answers on disk across runs (development only).
+Any error (network, timeout, bad JSON, bad key) means "unknown", which leans towards REVIEW.
 
 Settings (environment variables):
-  OPENROUTER_API_KEY   required to enable
-  OPENROUTER_MODEL     default below; pin it, do not use a floating alias
-  OPENROUTER_PROVIDER  provider to pin (default below); fallbacks are disabled
-  LLM_TIMEOUT          seconds per request (default 30)
-  LLM_CACHE_FILE       optional JSON file for answers across runs
+  XAI_API_KEY      required to enable
+  XAI_MODEL        default below; pin a dated model, not a floating alias
+  LLM_TIMEOUT      seconds per request (default 30)
+  LLM_CACHE_FILE   optional JSON file for answers across runs
 """
 import hashlib
 import json
@@ -30,9 +31,8 @@ import urllib.request
 
 from . import fallbacks, normalize
 
-API_URL = "https://openrouter.ai/api/v1/chat/completions"
-DEFAULT_MODEL = "anthropic/claude-haiku-4.5"
-DEFAULT_PROVIDER = "anthropic"
+API_URL = "https://api.x.ai/v1/chat/completions"
+DEFAULT_MODEL = "grok-4.20-0309-non-reasoning"   # dated, non-reasoning: fast and stable for extraction
 SEED = 7
 
 _state = {"requested": False, "cache": {}, "calls": 0, "failures": 0, "loaded_file": None}
@@ -48,7 +48,7 @@ def configure(use_llm: bool) -> None:
 
 
 def enabled() -> bool:
-    return _state["requested"] and bool(os.environ.get("OPENROUTER_API_KEY"))
+    return _state["requested"] and bool(os.environ.get("XAI_API_KEY"))
 
 
 def stats() -> dict:
@@ -79,15 +79,12 @@ def _save_cache_file():
 
 
 def _post(payload: dict, timeout: float) -> dict:
-    """One HTTPS request to OpenRouter (replaced by a fake in tests)."""
+    """One HTTPS request to xAI (replaced by a fake in tests)."""
     req = urllib.request.Request(
         API_URL,
         data=json.dumps(payload).encode("utf-8"),
-        headers={
-            "Authorization": "Bearer " + os.environ.get("OPENROUTER_API_KEY", ""),
-            "Content-Type": "application/json",
-            "X-Title": "screening-hackathon",
-        },
+        headers={"Authorization": "Bearer " + os.environ.get("XAI_API_KEY", ""),
+                 "Content-Type": "application/json"},
         method="POST",
     )
     with urllib.request.urlopen(req, timeout=timeout) as resp:
@@ -117,9 +114,8 @@ def chat_json(system: str, user: str, schema: dict, name: str = "answer"):
     """
     if not enabled():
         return None
-    model = os.environ.get("OPENROUTER_MODEL", DEFAULT_MODEL)
-    provider = os.environ.get("OPENROUTER_PROVIDER", DEFAULT_PROVIDER)
-    key = hashlib.sha256(json.dumps([model, provider, system, user, schema], sort_keys=True)
+    model = os.environ.get("XAI_MODEL") or DEFAULT_MODEL
+    key = hashlib.sha256(json.dumps([model, system, user, schema], sort_keys=True)
                          .encode("utf-8")).hexdigest()
     if key in _state["cache"]:
         return _state["cache"][key]
@@ -129,13 +125,11 @@ def chat_json(system: str, user: str, schema: dict, name: str = "answer"):
         "temperature": 0,
         "top_p": 1,
         "seed": SEED,
-        "max_tokens": 400,
+        "max_tokens": 1000,   # room for a reasoning model if XAI_MODEL points at one
         "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
         "response_format": {"type": "json_schema",
                             "json_schema": {"name": name, "strict": True, "schema": schema}},
     }
-    if provider:
-        payload["provider"] = {"order": [provider], "allow_fallbacks": False}
     timeout = float(os.environ.get("LLM_TIMEOUT", "30"))
 
     answer = None
@@ -148,6 +142,19 @@ def chat_json(system: str, user: str, schema: dict, name: str = "answer"):
             if isinstance(answer, dict):
                 break
             answer = None
+        except urllib.error.HTTPError as exc:
+            print(f"warning: LLM call failed (HTTP {exc.code})", file=sys.stderr)
+            if exc.code == 400 and ("seed" in payload or "response_format" in payload):
+                # A model that rejects an optional parameter: retry without it, asking for
+                # plain JSON instead (the reply is still parsed and checked against the text).
+                payload = {k: v for k, v in payload.items() if k not in ("seed", "response_format")}
+                payload["messages"] = [{"role": "system", "content": system +
+                                        " Reply with only one JSON object matching this schema: " +
+                                        json.dumps(schema)},
+                                       {"role": "user", "content": user}]
+                continue
+            if exc.code in (401, 403, 404):
+                break                    # bad key or unknown model: retrying will not help
         except (urllib.error.URLError, OSError, ValueError, KeyError, IndexError, TypeError) as exc:
             print(f"warning: LLM call failed ({type(exc).__name__}: {exc})", file=sys.stderr)
         if attempt < 2:
