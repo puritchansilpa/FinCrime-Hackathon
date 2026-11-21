@@ -202,8 +202,10 @@ def to_country(s):
     text = re.sub(r"\[[^\]]*\]|\([^)]*\)", " ", str(s)).strip()
     if not text:
         return None
-    if re.fullmatch(r"[A-Za-z]{2}", text) and text.upper() in _ISO_TABLE:
-        return _ISO_TABLE[text.upper()]
+    if re.fullmatch(r"[A-Z]{2}", text) and text in _ISO_TABLE:   # codes are upper case
+        return _ISO_TABLE[text]
+    if re.fullmatch(r"[A-Za-z]{2}", text):
+        return None
     for candidate in (text, text.split(",")[-1]):
         key = _fold(candidate)
         if key in NOT_COUNTRIES:
@@ -211,6 +213,53 @@ def to_country(s):
         if key in _COUNTRY_TABLE:
             return _COUNTRY_TABLE[key]
     return None
+
+
+_TEXT_CODES = {"UK", "US", "USA", "UAE", "U.S.", "U.K.", "U.S.A.", "DRC", "DPRK", "PRC"}
+_MAX_COUNTRY_WORDS = max(len(k.split()) for k in _COUNTRY_TABLE)
+
+
+def find_countries(text, skip_spans=()) -> list:
+    """Countries named in free text, as (canonical name, start, end), in text order.
+
+    Only capitalised names/demonyms ("Germany", "the United States", "a Nigerian passport")
+    and a few unambiguous codes (UK, US, UAE) count, so ordinary words such as "to" or
+    "at" never become Tonga or Austria. Longest match wins; spans in skip_spans
+    (e.g. the person's name) are ignored.
+    """
+    if not text:
+        return []
+    words = [(m.group(0), m.start(), m.end())
+             for m in re.finditer(r"[^\W\d_][\w'’.]*[\w.]|[^\W\d_]", str(text))]  # hyphens split
+    found, i = [], 0
+    while i < len(words):
+        hit = None
+        for n in range(min(_MAX_COUNTRY_WORDS, len(words) - i), 0, -1):
+            chunk = words[i:i + n]
+            start, end = chunk[0][1], chunk[-1][2]
+            if any(s < end and start < e for s, e in skip_spans):
+                continue
+            phrase = " ".join(w for w, _, _ in chunk).rstrip(".")
+            first = chunk[0][0]
+            if n == 1 and phrase.upper() == phrase and len(phrase.replace(".", "")) <= 4:
+                if first.rstrip(".") + ("." if first.endswith(".") else "") in _TEXT_CODES or phrase in _TEXT_CODES:
+                    hit = (to_country(phrase.replace(".", "")) or _COUNTRY_TABLE.get(_fold(phrase)), start, end, n)
+                    if hit[0]:
+                        break
+                    hit = None
+                continue
+            if not first[0].isupper():
+                continue
+            key = _fold(phrase)
+            if key in _COUNTRY_TABLE and key not in NOT_COUNTRIES:
+                hit = (_COUNTRY_TABLE[key], start, end, n)
+                break
+        if hit:
+            found.append(hit[:3])
+            i += hit[3]
+        else:
+            i += 1
+    return found
 
 
 # --- names (POLICY.md principle 8) --------------------------------------------------
