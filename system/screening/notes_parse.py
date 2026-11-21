@@ -147,7 +147,36 @@ def find_name(text) -> Optional[tuple]:
     return None
 
 
+# A negative word that is about an earlier document or an earlier check, not this one.
+_OLD_NEGATIVE = re.compile(
+    r"\b(?:previous|prior|old|earlier|former)\b(?:\W+\w+){0,6}\W+"
+    r"\b(?:expir\w*|reject\w*|out\s+of\s+date|lapsed)\b"
+    r"|\b(?:expir\w*|out\s+of\s+date|lapsed|reject\w*)\b(?:\W+\w+){0,4}\W+"
+    r"\b(?:passport|document|licen[cs]e|identity(?:\s+document)?|id\s+card)\b"
+    r"|\b(?:passport|document|licen[cs]e)\b(?:\W+\w+){0,4}\W+"
+    r"\b(?:expir\w*|lapsed|out\s+of\s+date)\b"
+    r"|\bexpired\s+flag\b"
+    r"|\b(?:previous|prior|earlier)\s+check\b(?:\W+\w+){0,3}\W+\breject\w*",
+    re.I)
+_REAL_APPROVAL = re.compile(r"\b(approved|verified|confirmed|passed)\b", re.I)
+
+
+def _has_real_approval(text: str) -> bool:
+    """An approval word that is not 'not approved' / 'could approve'."""
+    for match in _REAL_APPROVAL.finditer(text):
+        prefix = text[max(0, match.start() - 6):match.start()]
+        if re.search(r"(?:not|n't)\s*$", prefix, re.I):
+            continue
+        return True
+    return False
+
+
 def _result(text):
+    # "the old passport expired … Onfido approved …" is an approved check.
+    # "the check expired before it could be approved" is not.
+    if (_EXPIRED.search(text) or _REJECTED.search(text)) and _has_real_approval(text) \
+            and _OLD_NEGATIVE.search(text):
+        return "approved"
     if _EXPIRED.search(text):
         return "expired"
     if _REJECTED.search(text):
@@ -219,19 +248,40 @@ def parse_kyc_note(text: str, created_at: str = None) -> Optional[dict]:
 
 
 _YEAR = re.compile(r"\b(?:19|20)\d{2}\b")
-_RESIDENCE_CUE = re.compile(r"\b(?:liv\w*|resid\w*|home|work\w*|employ\w*|jobs?|based|stay\w*|moved|"
-                            r"relocat\w*|career|professional|personal|life|housing|established|ties)\b", re.I)
+_RESIDENCE_CUE = re.compile(
+    r"\b(?:liv\w*|resid\w*|home|work\w*|employ\w*|jobs?|based|stay\w*|moved|"
+    r"relocat\w*|career|professional|personal|life|housing|established|ties|"
+    r"raised|grew\s+up|originally\s+from|national\s+of)\b", re.I)
+# A country that belongs to a relative is not the customer's.
+_RELATIVE = re.compile(
+    r"\b(?:her|his|their)\s+(?:sister|brother|father|mother|husband|wife|son|daughter|"
+    r"parent|parents|sibling|uncle|aunt|cousin|spouse)\b"
+    r"|\b(?:sister|brother|father|mother)\b",
+    re.I)
+
+
+def _sentences(text: str) -> list:
+    return [part.strip() for part in re.split(r"(?<=[.!?])\s+|\n+", text or "") if part.strip()]
 
 
 def parse_residence_note(text: str) -> list:
     """Countries the customer lived or worked in, e.g. 'worked and lived in Pakistan from 2013 to 2015'.
 
-    Counts every country named in a note that also gives a year or a residence/work cue.
-    (Erring towards more countries only makes a location clearance less likely.)
+    Also 'raised in', 'grew up in', 'national of' and 'originally from'. A sentence
+    about a relative ('her sister lives in Pakistan') is not the customer's country.
     """
-    if not text or not (_YEAR.search(text) or _RESIDENCE_CUE.search(text)):
+    if not text:
         return []
-    return sorted({c for c, _, _ in fallbacks.find_countries(text)})
+    found = []
+    for sentence in _sentences(text):
+        if _RELATIVE.search(sentence):
+            continue
+        if not (_YEAR.search(sentence) or _RESIDENCE_CUE.search(sentence)):
+            continue
+        for country, _, _ in fallbacks.find_countries(sentence):
+            if country not in found:
+                found.append(country)
+    return sorted(found)
 
 
 def looks_like_residence(text: str) -> bool:

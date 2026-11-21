@@ -61,6 +61,28 @@ class KycNoteTests(unittest.TestCase):
                    "Veriff on 2025-06-01 using a Portuguese ID card.", "2025-06-01",
                    "Ana Lucia Pereira", D(1988, 1, 30), "Portugal")
 
+    def test_old_document_does_not_cancel_an_approval(self):
+        self.check("The customer's previous passport expired in 2019. Onfido approved JANE MARIE COLE, "
+                   "DOB 1982-04-04, via a Canadian passport on 2024-06-01.", "2024-06-01",
+                   "JANE MARIE COLE", D(1982, 4, 4), "Canada")
+        self.check("The previous check was rejected. Onfido approved LINA TAVARES, DOB 1984-06-06, "
+                   "via a Portuguese passport on 2024-08-01.", "2024-08-01",
+                   "LINA TAVARES", D(1984, 6, 6), "Portugal")
+        self.check("The out of date licence was replaced. Persona approved LINA UEDA, DOB 1985-07-07, "
+                   "via a Japanese passport on 2024-06-01.", "2024-06-01",
+                   "LINA UEDA", D(1985, 7, 7), "Japan")
+        self.check("The expired flag was a system error. Onfido approved LINA XANTHOS, DOB 1987-09-09, "
+                   "via a Greek passport on 2024-06-01.", "2024-06-01",
+                   "LINA XANTHOS", D(1987, 9, 9), "Greece")
+
+    def test_a_check_that_itself_failed_stays_failed(self):
+        self.check("The check expired before Persona could approve LINA VILLANUEVA, DOB 1986-08-08, "
+                   "via a Spanish passport.", "2024-06-01",
+                   "LINA VILLANUEVA", D(1986, 8, 8), "Spain", result="expired")
+        expired = parse_kyc_note("Onfido rejected JANE DOE, DOB 1982-04-04; the passport did not match.",
+                                 "2024-06-01")
+        self.assertEqual(expired["result"], "rejected")
+
     def test_not_a_kyc_note(self):
         self.assertIsNone(parse_kyc_note("Customer asked about savings interest rates.", "2024-01-01"))
         self.assertIsNone(parse_kyc_note("", "2024-01-01"))
@@ -85,6 +107,12 @@ class ResidenceNoteTests(unittest.TestCase):
             "Customer says they moved from the Netherlands to Spain in 2019.": ["Netherlands", "Spain"],
             "Customer asked why a card payment was declined at a supermarket.": [],
             "Customer called to ask how long an international transfer takes.": [],
+            "She was raised in Pakistan.": ["Pakistan"],
+            "She is a national of Nigeria.": ["Nigeria"],
+            "She grew up in Ghana before moving here.": ["Ghana"],
+            "She is originally from Italy.": ["Italy"],
+            "Her sister lives in Pakistan.": [],
+            "His brother moved from Pakistan in 2011.": [],
         }
         for text, want in cases.items():
             self.assertEqual(parse_residence_note(text), want, text)
