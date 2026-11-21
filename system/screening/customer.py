@@ -19,7 +19,7 @@ A6: build each Person: declared facts from every record; verified name, DOB and 
 Never use another customer's records.
 """
 from . import fallbacks, llm, names, normalize, notes_parse
-from .load import name_tokens, norm_key, phone_key
+from .load import document_key, name_tokens, norm_key, phone_key
 from .models import Fact, Person, Resolution
 
 LINKS = ("account_ref", "login_handle", "email")
@@ -206,7 +206,7 @@ def _same_person_links(rec, data):
                 if other["record_id"] != rid and parse_date(other.get("dob")) == dob:
                     yield other["record_id"], "phone+dob"
     for check in approved_checks(rid, data):
-        doc = norm_key(check.get("document_number"))
+        doc = document_key(check.get("document_number"))
         if not doc:
             continue
         for other_check in data.kyc_by_document.get(doc, ()):
