@@ -114,6 +114,39 @@ Ben will add about 20 held-out cases that Poom hasn't seen, so the learner isn't
 
 ---
 
+## Integration status (P3–P5 and the adversarial set merged into `main`)
+
+**Merged:** `fix-failopen`, `Poom` (P3–P5) and `Poom_adversarial`, including Poom's latest 4 commits.
+
+**Gate results:**
+- 205 tests pass.
+- `validate.py`: 50/50 practice decisions, 0 unsafe clearances.
+- Adversarial set: 128/128, 0 wrong clearances.
+- P5 bench: 0 wrong in every mode; with the LLM, 376 facts right, 0 unknown, 5 runs identical.
+- `check_runs` (5 runs): identical.
+- Template learner: 111 shapes, so the go/no-go passes.
+
+**Changes made in Poom's files during integration** (pull before editing them):
+- **`notes_parse.py`:**
+  - country codes are never names ("NG", "U.S.")
+  - a code next to a document word gives the document country ("passport (GB)")
+  - a city gives the document country ("issued in Lagos")
+  - dotted dates ("1979.08.30")
+  - a trailing LTD/LLC is kept in the name
+  - a holiday or trip is not residence
+  - `extend_name` keeps name particles ("Maria Clara dos Santos")
+  - `residence_without_place` (the unknown-place flag) skips relatives and trips
+- **`llm.py`:** the check result comes from the note's wording, never the model. LLM names go through `extend_name`.
+- **`templates.py`:** shapes the LLM learned take their result from the wording, and names go through `extend_name`.
+- **`hit.py` (Ben):**
+  - a birth date must directly follow "born / born on / b. / DOB:"
+  - a death in the notes counts only for the listed person ("<name> died on", "He/She died on", "Date of death:")
+- **`fallbacks.py` and `policy.py`:** Poom's own versions of the placeholder-name and impossible-date fixes were kept; mine were dropped.
+
+**Dev output:** compared with Poom's regenerated `output/dev.jsonl`, one hit differs. H-2C6B2E's profile says "DOB: 6/20/1955" and is now read as a full date, so a customer born 1955-11-19 is cleared on DOB_MISMATCH instead of being matched on the year alone.
+
+**LLM:** it now passes all three bench criteria. It stays opt-in (`--llm`) until we decide how the submission run is done: the organisers may only compare the output file we send.
+
 ## Sync points
 1. **Step 0 (Ben):** `llm-harness` goes into `main`.
 2. ✅ **Contract, B1, B2, P1, P2 (Ben):** `fix-failopen` goes into `main`. Poom works only on P3–P5 (template learner, bench cases, bench runner). When P3 hooks into `notes_parse`, pull `main` first: `parse_residence_note` changed.

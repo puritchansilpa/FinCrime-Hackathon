@@ -23,6 +23,12 @@ class DateTests(unittest.TestCase):
         self.assertEqual(F.parse_date("1976-06"), PartialDate(1976, 6))
         self.assertEqual(F.parse_date("1976"), PartialDate(1976))
         self.assertIsNone(F.parse_date("13/13/1976"))
+        # a day that month does not have is unknown, never coerced (ADV-H-117)
+        for bad in ("31/02/1980", "30/02/1980", "31/04/1980", "31 Feb 1980",
+                    "0000-01-01", "1980-13-01", "1980-02-31"):
+            self.assertIsNone(F.parse_date(bad), bad)
+        self.assertEqual(F.parse_date("29/02/2000"), PartialDate(2000, 2, 29))  # leap day
+        self.assertIsNone(F.parse_date("29/02/1900"))                            # 1900 is not a leap year
         self.assertIsNone(F.parse_date("1976; 1977"))
         self.assertTrue(F.full_date(F.parse_date("1 May 1990")))
         self.assertFalse(F.full_date(F.parse_date("May 1990")))
@@ -39,7 +45,8 @@ class CountryTests(unittest.TestCase):
             self.assertEqual(F.to_country(raw), want, raw)
 
     def test_not_countries(self):
-        for raw in ("International", "Europe [Associated]", "", None, "Atlantis"):
+        for raw in ("International", "Europe [Associated]", "", None, "Atlantis",
+                    "NA", "N/A", "UNKNOWN", "   "):
             self.assertIsNone(F.to_country(raw), raw)
 
 

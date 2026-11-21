@@ -146,13 +146,21 @@ class NameResult:
     hit: Optional[Fact] = None
 
 
+def _named(facts, company, variants, minimum):
+    """Facts that still have real name parts. Placeholders and blanks are missing, not names."""
+    out = []
+    for fact in facts:
+        if fact.value and str(fact.value).strip() and len(real_parts(fact.value, company, variants)) >= minimum:
+            out.append(fact)
+    return out
+
+
 def assess_name(cv: CustomerView, hp: HitProfile, variants: Optional[Variants]) -> NameResult:
     company = cv.entity_type == COMPANY
-    usable = [f for f in cv.name_facts if f.value and
-              len(real_parts(f.value, company, variants)) >= (1 if company else 2)]
-    # A hit name made only of placeholders ('N/A', 'UNKNOWN') is no name at all: it can
-    # neither agree nor contradict (ADV-H-110).
-    hit_names = [hf for hf in hp.names if hf.value and real_parts(hf.value, company, variants)]
+    usable = _named(cv.name_facts, company, variants, 1 if company else 2)
+    # A hit whose every name is N/A, TEST, UNKNOWN or blank has no name. That cannot
+    # contradict the customer (ADV-H-110); it is missing, so the hit stays review.
+    hit_names = _named(hp.names, company, variants, 1)
     if not usable or not hit_names:
         return NameResult(UNKNOWN)
     for cf in usable:
